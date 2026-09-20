@@ -1,13 +1,20 @@
 [project]
 name = "stil-lint"
 version = "0.1.0"
-description = "Stil- og kvalitetslinter for norsk (og engelsk) tekst, med Jev som skjønnslag. MCP-server."
+description = "Style and quality linter for Norwegian (and English) text, with TypeSafe's Jev as the judgment layer. MCP server and CLI."
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "fredrsat" }]
+keywords = ["lint", "style", "norwegian", "llm", "mcp", "jev", "slop"]
 requires-python = ">=3.11"
 dependencies = [
     "mcp>=1.2",
     "pyyaml>=6.0",
     "httpx>=0.27",
 ]
+
+[project.urls]
+Repository = "https://github.com/fredrsat/stil-lint"
 
 [project.optional-dependencies]
 stat = ["spacy>=3.7"]

@@ -19,7 +19,9 @@ prose.
 ## Quick start
 
 ```bash
-pip install -e .
+git clone https://github.com/fredrsat/stil-lint
+cd stil-lint
+pip install -e ".[pptx]"
 
 # Local check - nothing leaves your machine (layers 0-3)
 stil-lint check text.md --genre sakprosa
@@ -175,7 +177,10 @@ AGENT-META) are skipped.
 `hooks/pptx_stop_hook.py` is a Claude Code Stop hook that runs this check on
 recently modified .pptx files and feeds the findings back to Claude once per
 deck version - warn once, never nag. Register it in `~/.claude/settings.json`
-under `hooks.Stop`.
+under `hooks.Stop`. The hook runs locally (`mode: fast`) unless
+`TYPESAFE_API_KEY` is present in its environment; putting the TypeSafe
+variables in the `env` block of `~/.claude/settings.json` makes them available
+to every Claude Code session, hooks included.
 
 ## MCP tools
 

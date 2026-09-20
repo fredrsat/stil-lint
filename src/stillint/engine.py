@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import time
 from dataclasses import asdict
 from pathlib import Path
@@ -84,7 +85,8 @@ class Engine:
             "missing": result.missing,
             "no_judgment": result.no_judgment,
             "meta": {
-                "model": self.config.model if mode == "full" else None,
+                "model": (os.environ.get(jev_layer.MODEL_ENV, self.config.model)
+                          if mode == "full" else None),
                 "mode": mode,
                 "ms": int((time.monotonic() - t0) * 1000),
                 "jev_calls": jev_calls,

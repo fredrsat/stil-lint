@@ -17,8 +17,14 @@ pip install -e .
 stil-lint check tekst.md --genre sakprosa
 echo "Oppdatering: Hei!" | stil-lint check --genre varsel --channel push
 
-# Med Jev-skjønnslaget (lag 4)
+# Med Jev-skjønnslaget (lag 4), direkte mot TypeSafe
 export TYPESAFE_API_KEY=...
+stil-lint check tekst.md --mode full
+
+# Eller via OpenRouter (samme Decisions API, OpenRouter-nøkkel)
+export TYPESAFE_BASE_URL=https://openrouter.ai/api
+export TYPESAFE_API_KEY=sk-or-...
+export TYPESAFE_MODEL=jev-1.13        # OpenRouter bruker kortere modell-ID-er
 stil-lint check tekst.md --mode full
 
 stil-lint rules          # alle regler
@@ -28,10 +34,18 @@ stil-lint serve          # start MCP-serveren (stdio)
 MCP-oppsett for Claude Code (legges i `~/.claude.json`):
 
 ```bash
+# Direkte mot TypeSafe
 claude mcp add stil-lint -e TYPESAFE_API_KEY=... -- stil-lint serve
+
+# Via OpenRouter
+claude mcp add stil-lint \
+  -e TYPESAFE_API_KEY=sk-or-... \
+  -e TYPESAFE_BASE_URL=https://openrouter.ai/api \
+  -e TYPESAFE_MODEL=jev-1.13 \
+  -- stil-lint serve
 ```
 
-Utelat `-e TYPESAFE_API_KEY=...` hvis du bare skal bruke `mode: fast`.
+Utelat `-e`-flaggene hvis du bare skal bruke `mode: fast`.
 For Claude Desktop eller andre klienter, tilsvarende i JSON:
 
 ```json

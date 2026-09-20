@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import json
 import os
 import sqlite3
 import time
@@ -25,8 +24,14 @@ from .lex import Finding
 from .preprocess import PreprocessedText
 from .rules import Rule, RuleConfig
 
-API_URL = "https://api.typesafe.ai/v1/systemone"
+# Direkte mot TypeSafe som standard. Sett TYPESAFE_BASE_URL=https://openrouter.ai/api
+# for å gå via OpenRouter (samme Decisions API, OpenRouter-nøkkel som Bearer).
+BASE_URL_ENV = "TYPESAFE_BASE_URL"
+DEFAULT_BASE_URL = "https://api.typesafe.ai"
 API_KEY_ENV = "TYPESAFE_API_KEY"
+MODEL_ENV = "TYPESAFE_MODEL"
+
+
 CACHE_DB = Path.home() / ".stil-lint" / "jev-cache.db"
 CACHE_TTL = 14 * 24 * 3600
 MAX_RETRIES = 4
@@ -38,6 +43,10 @@ class JevError(RuntimeError):
 
 def api_key() -> str | None:
     return os.environ.get(API_KEY_ENV)
+
+
+def api_url() -> str:
+    return os.environ.get(BASE_URL_ENV, DEFAULT_BASE_URL).rstrip("/") + "/v1/systemone"
 
 
 class _Cache:
@@ -83,7 +92,7 @@ async def _call(client: httpx.AsyncClient, state: str, questions: dict[str, dict
     delay = 1.0
     for attempt in range(MAX_RETRIES):
         resp = await client.post(
-            API_URL,
+            api_url(),
             json=payload,
             headers={"Authorization": f"Bearer {api_key()}"},
             timeout=30.0,
@@ -114,6 +123,10 @@ async def run_jev(
     para_rules = [r for r in jev_rules if r.scope == "paragraph"]
     prose = [p for p in pre.paragraphs if not p.is_heading]
 
+    # Modell-ID kan overstyres per miljø: OpenRouter bruker "jev-1.13"/"jev-latest",
+    # direkte-API-et "jev-1.13.0". Cache-nøkkelen bruker samme resolverte ID.
+    model = os.environ.get(MODEL_ENV, config.model)
+
     cache = _Cache()
     lo, hi = config.no_judgment_band
     findings: list[Finding] = []
@@ -128,7 +141,7 @@ async def run_jev(
             nonlocal calls
             questions, cached = {}, {}
             for rule in rules:
-                key = cache.key(state, rule.what or "", config.model)
+                key = cache.key(state, rule.what or "", model)
                 hit = cache.get(key)
                 if hit is not None:
                     cached[rule.id] = hit
@@ -136,7 +149,7 @@ async def run_jev(
                     questions[rule.id] = _question_payload(rule)
             task = None
             if questions:
-                task = asyncio.ensure_future(_call(client, state, questions, config.model))
+                task = asyncio.ensure_future(_call(client, state, questions, model))
                 calls += 1
             tasks.append((state, paragraph, rules, cached, task))
 
@@ -151,7 +164,7 @@ async def run_jev(
                 fresh = await task
                 for rule in rules:
                     if rule.id in fresh:
-                        cache.put(cache.key(state, rule.what or "", config.model), fresh[rule.id])
+                        cache.put(cache.key(state, rule.what or "", model), fresh[rule.id])
                 answers = {**answers, **fresh}
             for rule in rules:
                 p = answers.get(rule.id)

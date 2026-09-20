@@ -1,43 +1,52 @@
 # stil-lint
 
-Stil- og kvalitetslinter for norsk (og engelsk) tekst, levert som MCP-server og CLI.
-Vurderer om en tekst holder menneskelig kvalitet eller er "AI-aktig", med flere
-uavhengige lag der TypeSafes Jev er ett av dem.
+A style and quality linter for Norwegian (and English) text, delivered as an MCP
+server and CLI. It judges whether a text reads like a human wrote it well — or
+like unedited LLM output — using several independent layers, with TypeSafe's
+Jev as the judgment layer.
 
-Verktøyet er en stillinter, **ikke** en forfatterskapsdetektor. Det rapporterer
-funn ("avsnitt 2 har en påhengt tolkning, p=0,88"), aldri "sannsynlighet for at
-en LLM skrev dette". Begrunnelsen står i `ai-stil-lint-research.md`, del 1.
+stil-lint is a *style linter*, **not** an authorship detector. It reports
+findings ("paragraph 2 has a not-X-but-Y contrast turn, p=0.88"), never "73%
+AI-written". Detectors that try to decide authorship fail systematically and
+punish non-native writers; the research behind this design choice is collected
+in `ai-stil-lint-research.md` (in Norwegian).
 
-## Bruk
+The primary use case: automated agents (weather, transit, homework, groceries)
+that send messages to a human should call this tool before sending, revise on
+findings, and only then deliver. It also works as a personal style check for
+prose.
+
+## Quick start
 
 ```bash
 pip install -e .
 
-# Lokal sjekk uten at noe forlater maskinen (lag 0-3)
-stil-lint check tekst.md --genre sakprosa
+# Local check - nothing leaves your machine (layers 0-3)
+stil-lint check text.md --genre sakprosa
 echo "Oppdatering: Hei!" | stil-lint check --genre varsel --channel push
 
-# Med Jev-skjønnslaget (lag 4), direkte mot TypeSafe
+# With the Jev judgment layer (layer 4), directly against TypeSafe
 export TYPESAFE_API_KEY=...
-stil-lint check tekst.md --mode full
+stil-lint check text.md --mode full
 
-# Eller via OpenRouter (samme Decisions API, OpenRouter-nøkkel)
+# Or through OpenRouter (same Decisions API, OpenRouter key)
 export TYPESAFE_BASE_URL=https://openrouter.ai/api
 export TYPESAFE_API_KEY=sk-or-...
-export TYPESAFE_MODEL=jev-1.13        # OpenRouter bruker kortere modell-ID-er
-stil-lint check tekst.md --mode full
+export TYPESAFE_MODEL=jev-1.13        # OpenRouter uses short model IDs
+stil-lint check text.md --mode full
 
-stil-lint rules          # alle regler
-stil-lint serve          # start MCP-serveren (stdio)
+stil-lint rules                        # list all rules
+stil-lint bank-add --agent-id my-agent # remember a sent message (phrase bank)
+stil-lint serve                        # start the MCP server (stdio)
 ```
 
-MCP-oppsett for Claude Code (legges i `~/.claude.json`):
+MCP setup for Claude Code (stored in `~/.claude.json`):
 
 ```bash
-# Direkte mot TypeSafe
+# Directly against TypeSafe
 claude mcp add stil-lint -e TYPESAFE_API_KEY=... -- stil-lint serve
 
-# Via OpenRouter
+# Through OpenRouter
 claude mcp add stil-lint \
   -e TYPESAFE_API_KEY=sk-or-... \
   -e TYPESAFE_BASE_URL=https://openrouter.ai/api \
@@ -45,96 +54,239 @@ claude mcp add stil-lint \
   -- stil-lint serve
 ```
 
-Utelat `-e`-flaggene hvis du bare skal bruke `mode: fast`.
-For Claude Desktop eller andre klienter, tilsvarende i JSON:
+Omit the `-e` flags if you only need `mode: fast`. For Claude Desktop or other
+clients, the equivalent JSON:
 
 ```json
 {"mcpServers": {"stil-lint": {"command": "stil-lint", "args": ["serve"],
                               "env": {"TYPESAFE_API_KEY": "..."}}}}
 ```
 
-Verktøy: `check_text`, `list_rules`, `explain_rule`, `record_feedback`, `bank_add`.
-Svar-skjemaet (verdict/score/findings/positives/missing/no_judgment) er beskrevet
-i researchdokumentet del 7.
+## How an agent uses it
 
-## Arkitektur
+The intended loop is **check → revise → send → remember**. The agent drafts its
+message, asks stil-lint for a verdict, fixes what the hints point at, sends,
+and finally banks the sent text so tomorrow's near-duplicate gets caught.
+
+### 1. Check the draft
+
+The agent calls the `check_text` MCP tool before sending:
+
+```json
+{
+  "text": "God morgen! ☀️ I dag blir det en nydelig dag! Gi meg beskjed hvis du vil vite mer!",
+  "genre": "varsel",
+  "channel": "push",
+  "mode": "full",
+  "agent_id": "weather-agent"
+}
+```
+
+- `genre` picks the rule profile. A push alert has strict rules (max two
+  sentences, no greeting); an essay does not.
+- `channel` enables channel rules - markdown and emoji are flagged in `push`
+  and `sms`, fine in `epost`.
+- `mode: "full"` adds the Jev judgment layer (requires an API key).
+  `mode: "fast"` runs only the local layers - nothing leaves the machine, so
+  sensitive text (homework, family messages) can always be checked.
+- `agent_id` enables the phrase-bank check against this agent's earlier
+  messages.
+
+### 2. Read the verdict
+
+```json
+{
+  "verdict": "revise",
+  "score": 0.0,
+  "round": 1,
+  "max_rounds": 2,
+  "findings": [
+    {"rule": "F02_hilsen_i_varsel", "severity": 3, "p": 1.0,
+     "hint": "Hilsen eller signatur i et varsel. Stryk; varselet skal bare inneholde saken."},
+    {"rule": "A04_chatbotrester", "severity": 3, "p": 1.0,
+     "hint": "Chatbot-rest. Stryk hele frasen; mottakeren snakker ikke med en assistent."},
+    {"rule": "C01_negativ_parallellisme", "severity": 2, "p": 0.78,
+     "hint": "Si andre halvdel direkte og stryk første."}
+  ],
+  "positives": {"G01_konkret_detalj": 0.22},
+  "missing": ["G01_konkret_detalj under 0.4 (p=0.22)"],
+  "no_judgment": [],
+  "meta": {"model": "jev-1.13", "ms": 692, "lang": "nb"}
+}
+```
+
+Three possible verdicts:
+
+- `pass` - send it.
+- `revise` - fix what the hints say, call `check_text` again with `round: 2`.
+- `pass_with_notes` - findings remain but the loop is over. After `max_rounds`
+  (default 2) the verdict is always `pass_with_notes`, so an agent can never
+  get stuck rewriting forever. This cap lives in the tool, not in the agent.
+
+Note the `missing` field: the draft above has no concrete detail (G01). Empty,
+generic text is *worse* than slightly AI-flavoured text with content - the
+positive G-rules are the counterweight that stops an agent from optimizing
+itself down to clean, empty prose.
+
+### 3. Revise and re-check
+
+The revised draft leads with the actionable fact, drops the greeting and the
+chatbot tail, and adds the concrete details:
 
 ```
-tekst + sjanger + kanal + språk
-  [0] preprocess.py  fjern kode/sitater/front matter, språkgjetting, avsnittsdeling
-  [1] lex.py         regex og ordlister (rules/lex.yaml)          lokalt
-  [2] stat.py        rytme, LIX, nominalisering, koblingsord      lokalt
-  [3] bank.py        frasebank per agent (SQLite, bare hasher)    lokalt
-  [4] jev.py         Jev-skjønn, dok + avsnitt samtidig, cache    api.typesafe.ai
-  [5] gate.py        terskler, ingen-vurdering-bånd 0,40-0,60,
-                     sjangerprofil, alvorlighetsvekt, verdict     policy i kode
+Klarvær i Oslo i morgen: sol fra morgenen av og opp mot 19 grader utover
+dagen. Kjølig på skoleveien rundt 07, ta med jakke.
 ```
 
-- `mode: fast` kjører lag 0-3 og er fullverdig for sensitive tekster.
-- Jev-svar caches på hash av (tekst, spørsmål, modell); tekst lagres aldri.
-- Etter `max_rounds` omskrivingsrunder returneres alltid `pass_with_notes`
-  slik at en agent ikke går i sløyfe.
-- Positive signaler (G-reglene) kreves for `pass` per profil - motvekten mot
-  at en agent optimaliserer seg til ren, tom tekst.
+→ `{"verdict": "pass", "score": 1.0}`
 
-## Regler og profiler
+### 4. After sending: remember it
 
-- `rules/lex.yaml` - gruppe A, B, E, F (regex/ordlister). **De norske ordlistene
-  er hypoteser** og skal valideres med frekvensratio mot korpus (del 8) før
-  terskler strammes.
-- `rules/stat.yaml` - metadata for de statistiske målene (C08, C11, A11, B05, F01, F05).
-- `rules/jev.yaml` - de ti prioriterte skjønnsreglene pluss G-gruppen, med
-  `what`/`not_for`/`criteria`/`hint`/`keep_if` etter mønster fra snifftest og
-  slopcheck-jev.
-- `profiles/*.yaml` - varsel, melding, epost, sakprosa, debatt, teknisk. En
-  profil slår regler av, setter terskler og krever positive signaler.
+```json
+{"agent_id": "weather-agent", "text": "Klarvær i Oslo i morgen: ..."}
+```
 
-## Status mot arbeidsrekkefølgen (research-doc del 9)
+sent to the `bank_add` tool. If the agent sends a near-identical message
+tomorrow, rule F05 fires ("same phrasing as an earlier message from this
+agent") - measured as shingle overlap, and only hashes are stored, never the
+text itself.
 
-| Steg | Status |
+### System-prompt snippet for an agent
+
+> Before sending any message to the user: call stil-lint's `check_text` with
+> the draft, `genre: varsel`, `channel: push`, `mode: full`, and
+> `agent_id: weather-agent`. If the verdict is `revise`, fix exactly what the
+> hints say and check once more with `round: 2`. Send when you get `pass` or
+> `pass_with_notes`. After sending, call `bank_add` with the text you sent.
+
+## MCP tools
+
+| Tool | Purpose |
 | --- | --- |
-| 1 Verifiser Jev-API og prior art | Gjort 2026-09-20 (docs.typesafe.ai, snifftest, slopcheck-jev) |
-| 2 Repo-oppsett | Gjort |
-| 3 Lag 0-1, `mode: fast` uten nøkkel | Gjort |
-| 4 Korpus og baseline-frekvenser | Gjort: NoReC (42 888 dok, 17,3 mill. token) + wordfreq nb. Se `bench/` |
-| 5 Parvise norske data, valider A02/E01 | Gjort: 800 fortsettelser + 128 assistentsvar fra 4 modellfamilier (`bench/report_llm_ratio.md`, `bench/report_assistant.md`). A05 bekreftet, A12 lagt til, A04 utvidet med plassholder-mønster. Presenslistene forblir presisjonsregler (for sjeldne til å måles på 26k token, 0 FP-kostnad) |
-| 6 Lag 2 (stat) | Gjort (heuristisk, uten spaCy; terskler er startverdier) |
-| 7 Lag 4 (Jev, ti regler, cache, bånd) | Gjort; verifisert live via OpenRouter |
-| 8 Seeded-fault-eval, norsk vs engelsk spørsmålstekst | Gjort (`bench/report_seeded_faults.md`): regex-laget 90-100 %, Jev-reglene 70-100 % etter spørsmålsomskriving (C02: 0->100 %, D05: 10->80 %). Norsk spørsmålstekst slår engelsk (C04: 100 mot 60 %, E01: 70 mot 30 %) - norsk beholdes. Jev-negativ kontroll: D05 5 % etter not_for-fiks + terskel 0,8 |
-| 9 Gate, profiler, `record_feedback` | Gjort (vekter er startverdier) |
-| 10 Frasebank | Gjort |
-| 11 Koble på bussvarsel-agenten, to ukers logging | Ikke påbegynt |
+| `check_text` | Check a text; returns verdict, findings with hints, positives, missing |
+| `list_rules` | Rules in effect, optionally filtered by genre profile |
+| `explain_rule` | What a rule looks for, what it deliberately ignores (`not_for`), its hint |
+| `record_feedback` | Mark a finding `riktig` (correct), `feil` (wrong) or `riktig_men_greit` (correct but fine) - calibration data |
+| `bank_add` | Add a sent message to the agent's phrase bank |
 
-## Korpus og evaluering (`bench/`)
+`riktig_men_greit` matters: it is the data that lets severity be tuned per
+genre over time.
+
+## Architecture
+
+```
+text + genre + channel + language
+  [0] preprocess.py  strip code/quotes/front matter, language guess, paragraph split
+  [1] lex.py         regex and word lists (rules/lex.yaml)         local, ~5 ms
+  [2] stat.py        rhythm, LIX, nominalization, connectors       local
+  [3] bank.py        phrase bank per agent (SQLite, hashes only)   local
+  [4] jev.py         Jev judgment, doc + paragraphs concurrently   api.typesafe.ai, ~0.7 s
+  [5] gate.py        thresholds, no-judgment band 0.40-0.60,
+                     genre profile, severity weights, verdict      policy in code
+```
+
+Design principles, distilled from the research document:
+
+- **Report findings, not a verdict on authorship.** Single tells prove
+  nothing; the gate weighs severity and genre, and that policy lives in code -
+  the model is never asked whether a human should care.
+- **A no-judgment band.** Jev answers around 0.5 on text it cannot read;
+  probabilities in 0.40-0.60 are reported as "no judgment", never as weak
+  findings. This matters extra for Norwegian.
+- **Presence is not severity.** Contrast, judgment and clear claims are often
+  the point of a text. Every finding carries a `keep_if` describing when to
+  keep the flagged construction.
+- **Positive checks.** A checklist only measures what is there; the G-rules
+  (concrete detail, takes a position, key point first, still reads naturally)
+  must clear a threshold for `pass`.
+- **Privacy.** `mode: fast` is fully local. Jev responses are cached keyed on
+  hash of (text, question, model); the text itself is never stored.
+
+## Rules and profiles
+
+- `rules/lex.yaml` - groups A (word choice), B (punctuation/formatting),
+  C/D (regex-detectable structure and content), E (Norwegian-specific
+  anglicisms), F (channel/agent rules). Word lists are corpus-validated where
+  noted; unvalidated entries are marked as hypotheses.
+- `rules/stat.yaml` - metadata for the statistical measures (sentence-length
+  variance, nominalization density, connector openers, structure-vs-length,
+  alert length, phrase-bank repetition).
+- `rules/jev.yaml` - judgment rules sent to Jev, each with `what`, `not_for`,
+  `criteria`, a fixed `hint` and `keep_if`. Written in Norwegian - measured
+  better than English questions on Norwegian text (see below).
+- `profiles/*.yaml` - `varsel` (push alerts), `melding` (informal messages),
+  `epost`, `sakprosa` (essays/articles), `debatt` (op-eds: contrast rules off,
+  taking a position required), `teknisk` (docs: list rules off). A profile
+  disables rules, sets thresholds and severity weights, and lists required
+  positives.
+
+Rule hints are in Norwegian since the target text is Norwegian; an English
+hint set would be a straightforward addition.
+
+## Evaluation (bench/)
+
+Everything is reproducible:
 
 ```bash
-sh bench/fetch_corpus.sh                 # kloner NoReC til bench/data/ (gitignorert)
-python bench/build_baseline.py           # n-gram-baseline -> bench/data/baseline_nb.json.gz
-python bench/validate_wordlists.py       # ordlister mot menneskelig frekvens
-python bench/negative_control.py 500     # falsk-positiv-rate per regel på ren tekst
+sh bench/fetch_corpus.sh                  # clone NoReC into bench/data/ (gitignored)
+python bench/build_baseline.py            # n-gram baseline -> baseline_nb.json.gz
+python bench/validate_wordlists.py        # word lists vs. human frequency
+python bench/negative_control.py 500      # false-positive rate per rule, clean text
+python bench/negative_control.py 60 full  # same, with the Jev layer
+python bench/generate_pairs.py 100        # LLM continuations (Reinhart method)
+python bench/generate_assistant.py        # LLM assistant-register texts
+python bench/llm_ratio.py                 # overrepresentation vs. baseline
+python bench/seeded_faults.py 10          # plant one known fault per rule, measure catch
 ```
 
-Resultater per 2026-09-20 (`bench/report_wordlists.md`, `bench/report_negative_control.md`):
+Results as of 2026-09-20 (reports in `bench/`):
 
-- Flere fraser fra hypoteselistene viste seg vanlige i menneskelig norsk og er
-  strøket fra tilstedeværelsesreglene ("med andre ord" 131/mill., "alt i alt"
-  52/mill., "i form av" 74/mill.). Endelig dom krever LLM-siden av ratioen (steg 5).
-- B08 (Oxford-komma) flagget 35 % av rene avsnitt før omskriving (komma foran
-  "og" mellom helsetninger er korrekt norsk); etter krav om ekte oppramsing: 0 %.
-- Alle regler ligger nå under 5 %-grensen i negativ kontroll (verst: C08 på 3,4 %).
-- 473 uflaggede NoReC-avsnitt ligger i `bench/data/clean_paragraphs.jsonl` som
-  grunnlag for seeded-fault-evalueringen.
+- **Human baseline**: NoReC, 42,888 Norwegian reviews 1998-2019 (17.3M tokens,
+  pre-LLM), plus the `wordfreq` nb snapshot.
+- **Negative control**: every rule under the 5% false-positive limit on clean
+  human paragraphs (worst: uniform sentence rhythm at 3.4%). The first run
+  caught a real bug - the Oxford-comma rule flagged 35% of human text because
+  a comma before "og" between main clauses is correct Norwegian; rewritten to
+  require an actual enumeration: 0%.
+- **Word-list validation**: several hypothesized "AI phrases" turned out to be
+  common human Norwegian ("med andre ord" 131/million) and were cut. Intensifier
+  overuse (A05) was confirmed at 4-21x across all four model families. A new
+  rule (A12) was added from discovered n-grams that are 15-113x
+  overrepresented, with 0% false positives under a two-hit requirement.
+- **Seeded faults**: regex layer catches 90-100%; Jev rules catch 70-100%
+  after two questions were rewritten with sharper definitions (forced-triad
+  went 0% → 100%, feeling-without-mechanism 10% → 80% at 5% FP).
+- **Norwegian beats English question text** for Jev on Norwegian text
+  (100% vs 60%, 70% vs 30% on two rules, and far fewer no-judgment answers), so
+  the questions stay Norwegian.
+- **Family-specific fingerprints** confirmed: each model family overuses its
+  own phrases, so single-family word lists do not transfer.
 
-LLM-siden (`bench/generate_pairs.py` + `bench/llm_ratio.py`, `bench/report_llm_ratio.md`):
+Caveats: n is small (10 planted faults per rule, 60-500 control paragraphs);
+read percentages against run-to-run variation. The LLM corpora are review
+continuations and assistant answers from four families via OpenRouter
+(gpt-5.4-mini, claude-sonnet-4.6, llama-4-maverick, gemini-3.8-flash).
 
-- 800 norske fortsettelser (Reinhart-metoden) fra gpt-5.4-mini, claude-sonnet-4.6,
-  llama-4-maverick og gemini-3.8-flash, nøytral og "skriv menneskelig"-variant.
-- A05 (forsterkere) bekreftet 4-21x overrepresentert på tvers av alle fire familier.
-- Ny regel A12: n-gram 15-113x overrepresentert ("føles både", "det høres kanskje",
-  "resultatet er en" ...), 0 % falske positiver på menneskelig tekst med to-treffs-krav.
-- Fingeravtrykkene er familiespesifikke, som Antislop-artikkelen fant.
-- Viktig forbehold: fortsettelses-oppsettet undertrykker assistent-registeret, så
-  presenslistene (A02, A08) er verken bekreftet eller avkreftet av denne runden.
-  Neste validering bør bruke assistent-oppgaver (svar, meldinger) i stedet.
+## Work plan status
 
-Kjør testene med `python -m pytest` (35 tester).
+| Step (from the research document) | Status |
+| --- | --- |
+| 1 Verify Jev API and prior art | Done 2026-09-20 |
+| 2 Repo setup | Done |
+| 3 Layers 0-1, `mode: fast` without a key | Done |
+| 4 Corpus and baseline frequencies | Done (NoReC + wordfreq nb) |
+| 5 Paired Norwegian data, validate word lists | Done (800 continuations + 128 assistant texts, 4 families) |
+| 6 Layer 2 (statistics) | Done (heuristic, spaCy optional) |
+| 7 Layer 4 (Jev, cache, no-judgment band) | Done; verified live via OpenRouter |
+| 8 Seeded-fault eval, nb vs en question text | Done; Norwegian questions win |
+| 9 Gate, genre profiles, feedback | Done (weights are starting values) |
+| 10 Phrase bank | Done |
+| 11 Connect a real agent, two weeks of logging, pooled adjudication | Next |
+
+Run the tests with `python -m pytest` (37 tests).
+
+## License and data
+
+Code: MIT. The NoReC corpus (used only for offline evaluation, never shipped)
+is CC BY-NC 4.0; derived frequency lists are permitted for any use per the
+corpus authors. Jev/TypeSafe and OpenRouter are paid APIs with their own terms.

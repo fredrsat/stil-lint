@@ -1,0 +1,10 @@
+# Uformelle meldinger til familie. Smisk og amerikansk entusiasme strenge.
+pass_score: 0.75
+required_positives: [G01_konkret_detalj]
+rules_off:
+  - C08_ensartet_rytme
+  - C11_nominalisering
+  - A11_koblingsord
+  - B05_struktur_vs_lengde
+thresholds:
+  A09_smisk: 0.6

@@ -1,0 +1,47 @@
+# Lag 2: statistiske regler. Målingene gjøres i kode (stat.py); her ligger
+# metadata, terskler og hint. `pattern`/`words` brukes ikke av dette laget.
+version: 1
+
+rules:
+  - id: C08_ensartet_rytme
+    layer: stat
+    scope: paragraph
+    lang: [nb, nn, en]
+    severity: 1
+    hint: "Setningene er påfallende like lange. Varier: en kort setning gjør jobben."
+
+  - id: C11_nominalisering
+    layer: stat
+    scope: paragraph
+    lang: [nb, nn]
+    severity: 2
+    hint: "Høy nominaliseringstetthet (\"gjennomføring av en vurdering av\"). Bruk verb."
+
+  - id: A11_koblingsord
+    layer: stat
+    scope: document
+    lang: [nb, nn]
+    severity: 1
+    hint: "Mange setninger åpner med koblingsord (Dessuten, Videre, Imidlertid). Stryk de fleste; rekkefølgen bærer sammenhengen."
+
+  - id: B05_struktur_vs_lengde
+    layer: stat
+    scope: document
+    lang: [nb, nn, en]
+    severity: 2
+    hint: "Overskrifter og lister i en kort tekst. Skriv løpende prosa."
+
+  - id: F01_for_langt_varsel
+    layer: stat
+    scope: document
+    lang: [nb, nn, en]
+    severity: 3
+    channels: [push, sms, varsel]
+    hint: "Varselet er lengre enn innholdet krever. Kutt til det handlingsrettede faktumet."
+
+  - id: F05_gjentatt_formulering
+    layer: bank
+    scope: document
+    lang: [nb, nn, en]
+    severity: 2
+    hint: "Samme formulering som en tidligere melding fra samme agent. Varier, eller send bare det som er nytt."

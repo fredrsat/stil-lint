@@ -1,0 +1,3 @@
+# Sakprosa: hele katalogen, standardterskler.
+pass_score: 0.75
+required_positives: [G01_konkret_detalj]

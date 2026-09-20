@@ -1,0 +1,13 @@
+# Push-varsler og korte agentmeldinger (buss, vær). Gruppe F på, formatering streng.
+max_words: 60
+pass_score: 0.8
+required_positives: [G01_konkret_detalj, G03_poenget_forst]
+rules_off:
+  - D01_generisk           # D-gruppen av: for kort tekst til at den gir mening
+  - D02_betydningsoppblasing
+  - D05_folelse_ikke_mekanisme
+  - C06_halsrensk
+  - C08_ensartet_rytme
+  - A11_koblingsord
+thresholds:
+  C04_oppsummerende_slutt: 0.8

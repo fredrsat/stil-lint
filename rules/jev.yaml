@@ -1,0 +1,227 @@
+# Lag 4: skjønnsregler til Jev. De ti første fra arbeidsrekkefølgen (del 9, pkt. 7)
+# pluss positive signaler (G) som gate-en trenger.
+# Skriveregler fra del 3: høy p = ja, ett skjønn per spørsmål, definer begrepet,
+# not_for holder regelen ærlig, 0,40-0,60 er "ingen vurdering".
+version: 1
+model: jev-1.13.0
+threshold: 0.7
+no_judgment_band: [0.40, 0.60]
+
+rules:
+  - id: C01_negativ_parallellisme
+    layer: jev
+    scope: paragraph
+    lang: [nb, nn, en]
+    severity: 2
+    genres_off: [debatt]
+    what: |
+      Minst én setning avviser en merkelapp bare for å erstatte den med en annen
+      ("ikke bare X, men Y", "det handler ikke om X, det handler om Y"), der
+      avvisningen ikke svarer på noe leseren faktisk trodde.
+    not_for: |
+      En reell korreksjon av en misforståelse som er nevnt tidligere i teksten.
+      En saklig avgrensning ("gjelder ikke buss 510, bare 505").
+    criteria:
+      "true": "Minst én setning har en kontrastvending som er pynt, ikke korreksjon."
+      "false": "Ingen kontrastvending, eller kontrasten retter en reell misforståelse."
+    hint: "Si andre halvdel direkte og stryk første."
+    keep_if: "Kontrasten er selve argumentet i teksten."
+
+  - id: C02_tvunget_tretall
+    layer: jev
+    scope: paragraph
+    lang: [nb, nn, en]
+    severity: 1
+    genres_off: [debatt]
+    what: |
+      En oppramsing har tre sideordnede ledd ("rask, trygg og enkel") der leddene
+      ikke er tre klart forskjellige ting: minst ett ledd gjentar, overlapper med
+      eller tilfører ingenting utover de andre. Spørsmålet er om de tre leddene er
+      reelt sideordnede og hver for seg nødvendige.
+    not_for: |
+      Tre ledd som faktisk er tre forskjellige, konkrete ting.
+      Oppramsinger med to eller fire ledd.
+    criteria:
+      "true": "Minst én tre-leddsoppramsing der leddene ikke er tre reelt forskjellige ting."
+      "false": "Ingen tre-leddsoppramsing, eller alle ledd er hver for seg nødvendige."
+    hint: "Stryk leddet som ikke tilfører noe, eller behold bare det presise."
+    keep_if: "Alle tre leddene er hver for seg sanne og nødvendige."
+
+  - id: C04_oppsummerende_slutt
+    layer: jev
+    scope: paragraph
+    lang: [nb, nn, en]
+    severity: 2
+    what: |
+      Avsnittets siste setning tilfører ingen ny opplysning: den gjentar det
+      avsnittet alt har sagt, eller lander på en generell visdom ("Til syvende og
+      sist handler det om tillit").
+    not_for: |
+      En sistesetning med ny informasjon, et konkret forbehold eller en beskjed
+      om hva som skjer videre.
+    criteria:
+      "true": "Siste setning er ren gjentakelse eller påklistret visdom."
+      "false": "Siste setning tilfører noe leseren ikke alt har fått."
+    hint: "Stryk siste setning. Slutt på den tydeligste konkrete setningen som allerede står der."
+    keep_if: "Setningen tilfører en ny opplysning."
+
+  - id: C06_halsrensk
+    layer: jev
+    scope: document
+    lang: [nb, nn, en]
+    severity: 2
+    what: |
+      Åpningen utsetter innholdet: den gjentar spørsmålet, setter scenen ("I
+      dagens digitale hverdag") eller lover hva teksten skal handle om, i stedet
+      for å begynne med saken.
+    not_for: |
+      En åpning som gir nødvendig kontekst leseren ikke har, eller går rett på sak.
+    criteria:
+      "true": "Første avsnitt kunne strykes uten at leseren mistet noe."
+      "false": "Første avsnitt inneholder informasjon eller standpunkt leseren trenger."
+    hint: "Stryk åpningen og begynn med den første setningen som sier noe."
+    keep_if: "Åpningen gir kontekst mottakeren faktisk mangler."
+
+  - id: C10_pahengt_tolkning
+    layer: jev
+    scope: paragraph
+    lang: [nb, nn]
+    severity: 2
+    what: |
+      En setning består av et faktum pluss en påhengt tolkning av faktumet i
+      samme setning ("..., noe som understreker betydningen av ...", "... og
+      bidrar dermed til ..."), der tolkningen er generell og ikke følger av
+      faktumet alene.
+    not_for: |
+      Relativsetninger som tilfører konkret informasjon ("..., noe som koster
+      400 kr ekstra"). Årsakssammenhenger teksten faktisk belegger.
+    criteria:
+      "true": "Minst én setning har en påhengt, generell tolkningshale."
+      "false": "Ingen tolkningshaler, eller halene bærer konkret innhold."
+    hint: "Stryk halen. Hvis tolkningen er viktig, gi den en egen setning med belegg."
+    keep_if: "Halen inneholder en konkret, etterprøvbar opplysning."
+
+  - id: D01_generisk
+    layer: jev
+    scope: paragraph
+    lang: [nb, nn, en]
+    severity: 3
+    what: |
+      Avsnittet kunne stått i en tekst om nesten hva som helst: ingen navn, tall,
+      datoer, steder eller detaljer knytter det til akkurat dette emnet.
+    not_for: |
+      Korte overgangsavsnitt på én setning. Avsnitt der emnet er abstrakt og
+      likevel behandles presist.
+    criteria:
+      "true": "Avsnittet ville gitt like god mening i en tekst om et annet emne."
+      "false": "Avsnittet inneholder detaljer som binder det til akkurat dette emnet."
+    hint: "Erstatt avsnittet med det konkrete: hvem, hva, når, hvor mye."
+    keep_if: "Avsnittet er en bevisst kort overgang."
+
+  - id: D02_betydningsoppblasing
+    layer: jev
+    scope: paragraph
+    lang: [nb, nn]
+    severity: 2
+    what: |
+      Et rutinefaktum gjøres til noe stort: et vendepunkt, en milepæl, del av en
+      større utvikling eller "et viktig skritt", uten at teksten belegger hvorfor
+      det er stort.
+    not_for: |
+      Hendelser teksten faktisk viser er uvanlige. Saklig omtale av rutine som rutine.
+    criteria:
+      "true": "Minst ett rutinefaktum er blåst opp til noe stort uten belegg."
+      "false": "Faktaene omtales i sitt faktiske format."
+    hint: "Si faktumet uten rammen. Hvis det faktisk er stort, vis hvorfor med tall eller sammenligning."
+    keep_if: "Teksten belegger at hendelsen faktisk er uvanlig."
+
+  - id: D05_folelse_ikke_mekanisme
+    layer: jev
+    scope: paragraph
+    lang: [nb, nn]
+    severity: 2
+    what: |
+      Teksten sier hvordan noe oppleves (trygt, enkelt, kraftfullt, sømløst) uten
+      å si hva det gjør eller hvordan det virker.
+    not_for: |
+      Tekst som beskriver både opplevelse og mekanisme. Sjangre der opplevelsen
+      er saken (anmeldelser).
+    criteria:
+      "true": "Avsnittet har opplevelsesord uten en eneste mekanisme bak dem."
+      "false": "Avsnittet forklarer hva tingen gjør, eventuelt i tillegg til hvordan den oppleves."
+    hint: "Bytt opplevelsesordet med hva tingen faktisk gjør."
+    keep_if: "Sjangeren er anmeldelse eller personlig erfaring."
+
+  - id: E01_oversatt_engelsk
+    layer: jev
+    scope: paragraph
+    lang: [nb, nn]
+    severity: 2
+    what: |
+      Teksten lyder som oversatt engelsk: idiomer, leddstilling eller
+      preposisjonsbruk som er uvanlig på norsk, men vanlig på engelsk
+      ("på slutten av dagen", "gjøre en forskjell", brudd på V2-regelen etter
+      foranstilt ledd).
+    not_for: |
+      Etablerte lånord og fagtermer. Sitater fra engelske kilder.
+    criteria:
+      "true": "Minst én formulering ville en norsk skribent ikke valgt, men en direkte oversettelse forklarer den."
+      "false": "Teksten lyder som idiomatisk norsk."
+    hint: "Finn den norske vendingen, eller skriv setningen på nytt uten det engelske mønsteret."
+    keep_if: "Formuleringen er et etablert lånord i domenet."
+
+  # ---------- G. Positive signaler (teller FOR teksten) ----------
+  - id: G01_konkret_detalj
+    layer: jev
+    scope: document
+    lang: [nb, nn, en]
+    severity: 2
+    positive: true
+    what: |
+      Teksten inneholder minst én konkret detalj (navn, tall, tidspunkt, sted)
+      som er relevant for poenget.
+    criteria:
+      "true": "Minst én konkret, relevant detalj finnes."
+      "false": "Ingen konkrete detaljer, eller detaljene er pynt uten relevans."
+    hint: "Legg inn det konkrete: hvem, hva, når, hvor mye."
+
+  - id: G02_tar_stilling
+    layer: jev
+    scope: document
+    lang: [nb, nn, en]
+    severity: 2
+    positive: true
+    what: |
+      Teksten tar stilling der sjangeren ber om det: den lander på et standpunkt
+      eller en anbefaling i stedet for å veie for og imot uten konklusjon.
+    criteria:
+      "true": "Leseren vet hva teksten mener eller anbefaler."
+      "false": "Teksten ender i 'det avhenger av flere faktorer' eller tilsvarende."
+    hint: "Konkluder. Si hva du mener, og la forbeholdene stå som forbehold."
+
+  - id: G03_poenget_forst
+    layer: jev
+    scope: document
+    lang: [nb, nn, en]
+    severity: 2
+    positive: true
+    what: |
+      Første setning sier det viktigste i teksten.
+    criteria:
+      "true": "En leser som bare leser første setning, får hovedpoenget."
+      "false": "Hovedpoenget kommer senere, eller kommer aldri."
+    hint: "Flytt konklusjonen først."
+
+  - id: G06_fortsatt_naturlig
+    layer: jev
+    scope: document
+    lang: [nb, nn, en]
+    severity: 2
+    positive: true
+    what: |
+      Teksten er klar og naturlig å lese: setningene henger sammen, ingenting
+      virker mekanisk strøket eller stokkete.
+    criteria:
+      "true": "Teksten flyter som noe et menneske ville sendt."
+      "false": "Teksten virker amputert, oppstykket eller overkorrigert."
+    hint: "Skriv avsnittet på nytt i én sammenhengende tanke i stedet for å flikke mer."

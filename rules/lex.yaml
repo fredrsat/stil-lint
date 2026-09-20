@@ -1,0 +1,289 @@
+# Lag 1: regex- og ordlisteregler (gruppe A, B, E, F fra researchdokumentet del 2).
+# NB: de norske ordlistene er hypoteser og skal valideres med frekvensratio mot
+# korpus (del 8) før terskler strammes. severity: 1 kosmetisk, 2 merkbar, 3 ødelegger tilliten.
+version: 1
+
+rules:
+  # ---------- A. Ordvalg ----------
+  - id: A01_stilord_en
+    layer: regex
+    scope: paragraph
+    lang: [en]
+    severity: 2
+    words: [delve, delves, delving, tapestry, testament, underscore, underscores, pivotal,
+            crucial, intricate, showcase, showcases, foster, fosters, garner, garners,
+            leverage, leverages, seamless, seamlessly, robust, landscape, realm, navigate,
+            navigating, embark, embarks, vibrant, multifaceted, meticulous, boasts, interplay,
+            enduring]
+    max_per_1000: 3
+    hint: "Bytt stilordet med et hverdagsord, eller stryk setningen det pynter på."
+
+  - id: A02_stilord_nb
+    layer: regex
+    scope: paragraph
+    lang: [nb, nn]
+    severity: 2
+    words: [banebrytende, revolusjonerende, sømløs, sømløst, helhetlig, skreddersydd,
+            "sentral rolle", "spiller en viktig rolle", "vitner om", understreker, belyser,
+            fremhever, "legger til rette for", "i stadig endring", "i dagens samfunn",
+            "i en verden der", "verdifull innsikt", "nøkkelen til", synergi, paradigmeskifte]
+    max_per_1000: 3
+    hint: "Ordliste-hypotese (A02): bytt med et hverdagsord eller stryk. Valideres mot korpus."
+
+  - id: A03_skiltfraser
+    layer: regex
+    scope: paragraph
+    lang: [nb, nn]
+    severity: 2
+    words: ["det er viktig å merke seg", "det er verdt å nevne", "la oss se nærmere på",
+            "la oss dykke ned i", "la oss bryte det ned", "kort sagt", "med andre ord",
+            "alt i alt", "til syvende og sist", "når det kommer til"]
+    hint: "Skiltfrasen sier at noe kommer i stedet for å si det. Stryk den og behold innholdet."
+
+  - id: A04_chatbotrester
+    layer: regex
+    scope: document
+    lang: [nb, nn, en]
+    severity: 3
+    pattern: '(?i)(håper dette hjelper|gi meg beskjed hvis|^selvfølgelig!|^absolutt!|godt spørsmål|her er en oversikt:|som en (KI|AI)|hope this helps|let me know if|as an AI|\[(Navn|Name|Dato|Date)\])'
+    hint: "Chatbot-rest. Stryk hele frasen; mottakeren snakker ikke med en assistent."
+
+  - id: A05_forsterkere
+    layer: regex
+    scope: paragraph
+    lang: [nb, nn]
+    severity: 1
+    words: ["ærlig talt", "helt ærlig", virkelig, faktisk, utrolig, genuint, "rett og slett",
+            "uten tvil"]
+    max_per_1000: 6
+    hint: "Høy tetthet av forsterkere. Behold høyst én, stryk resten."
+
+  - id: A08_oppblast
+    layer: regex
+    scope: paragraph
+    lang: [nb, nn]
+    severity: 1
+    words: [benytte, benytter, anvende, anvender, implementere, implementerer, fasilitere,
+            fasiliterer, optimalisere, optimaliserer, "i forbindelse med", "med hensyn til"]
+    max_per_1000: 5
+    hint: "Klarspråk: bruk det enkle ordet (bruke, gjøre, om). Jf. Språkrådets råd."
+
+  - id: A09_smisk
+    layer: regex
+    scope: paragraph
+    lang: [nb, nn]
+    severity: 2
+    words: ["det er helt forståelig", "du er ikke alene", "det er helt normalt å føle",
+            "så bra at du spør"]
+    hint: "Terapitone. Svar på saken i stedet for å validere følelsen."
+
+  - id: A10_metaforsubstantiv
+    layer: regex
+    scope: paragraph
+    lang: [nb, nn]
+    severity: 1
+    words: [reise, reisen, landskap, landskapet, økosystem, økosystemet, verktøykasse,
+            verktøykassen, byggestein, byggesteiner, fundamentet, kompass]
+    max_per_1000: 4
+    hint: "Abstrakt metafor-substantiv. Si den konkrete tingen i stedet."
+
+  # ---------- B. Tegnsetting, typografi, formatering ----------
+  - id: B01_tankestrek
+    layer: regex
+    scope: paragraph
+    lang: [nb, nn, en]
+    severity: 1
+    pattern: '\w—\w'
+    max_count: 1
+    hint: "Engelsk em dash uten mellomrom. Norsk tankestrek har mellomrom rundt seg – slik."
+
+  - id: B02_kolonavsloring
+    layer: regex
+    scope: paragraph
+    lang: [nb, nn]
+    severity: 1
+    pattern: '(?im)^(her er greia|resultatet|poenget|konklusjonen|kort fortalt):'
+    hint: "Kolon-avsløring. Si setningen rett fram uten oppspill."
+
+  - id: B03_fet_tetthet
+    layer: regex
+    scope: document
+    lang: [nb, nn, en]
+    severity: 1
+    pattern: '\*\*[^*\n]+\*\*'
+    max_per_1000: 8
+    hint: "Mye fet skrift. Fet på vilkårlige fraser leser som utheving uten grunn."
+
+  - id: B04_fet_etikett
+    layer: regex
+    scope: document
+    lang: [nb, nn, en]
+    severity: 2
+    pattern: '(?m)^\s*(?:[-*+•]|\d+[.)])\s+\*\*[^*\n]{2,40}:?\*\*'
+    max_count: 2
+    hint: "Punktliste med fet etikett. Skriv løpende tekst, eller stryk etiketten."
+
+  - id: B06_emoji_struktur
+    layer: regex
+    scope: document
+    lang: [nb, nn, en]
+    severity: 2
+    pattern: '(?m)^\s*(?:#{1,6}\s*)?[\U0001F300-\U0001FAFF☀-➿]'
+    hint: "Emoji som punktmerke eller overskrift. Stryk emojien."
+
+  - id: B07_title_case_no
+    layer: regex
+    scope: document
+    lang: [nb, nn]
+    severity: 1
+    pattern: '(?m)^#{1,6}\s+(?:[A-ZÆØÅ][a-zæøå]+\s+){2,}[A-ZÆØÅ][a-zæøå]+'
+    hint: "Norske overskrifter har stor forbokstav bare i første ord og egennavn."
+
+  - id: B08_oxford_komma
+    layer: regex
+    scope: paragraph
+    lang: [nb, nn]
+    severity: 1
+    pattern: '\w+, (?:og|eller) '
+    hint: "Oxford-komma er en anglisisme. Stryk kommaet foran og/eller i oppramsing."
+
+  - id: B09_engelske_anforselstegn
+    layer: regex
+    scope: document
+    lang: [nb, nn]
+    severity: 1
+    advisory: true
+    pattern: '“[^”\n]+”'
+    max_count: 1
+    hint: "Norsk bruker «anførselstegn». Svakt tegn, mange mennesker gjør det samme."
+
+  - id: B10_komma_etter_adverb
+    layer: regex
+    scope: paragraph
+    lang: [nb, nn]
+    severity: 2
+    pattern: '(?m)^(Imidlertid|I dag|I tillegg|Dessuten|Videre|Heldigvis|Dessverre), [a-zæøå]+ (?!er |var |har |kan |vil |må |ble |skal )'
+    hint: "Engelsk mønster: komma etter foranstilt adverb med brudd på V2. Skriv om med verbet på andreplass."
+
+  - id: B11_markdown_i_rentekst
+    layer: regex
+    scope: document
+    lang: [nb, nn, en]
+    severity: 3
+    channels: [sms, push, varsel]
+    pattern: '(?m)(\*\*|^#{1,6}\s|^\s*[-*]\s)'
+    hint: "Markdown i ren tekst-kanal. Fjern stjerner, skigarder og punktmerker."
+
+  - id: B12_pynt
+    layer: regex
+    scope: document
+    lang: [nb, nn, en]
+    severity: 1
+    pattern: '(?m)(→|⇒|^\s*[-—_=]{3,}\s*$)'
+    max_count: 1
+    hint: "Piler og skillelinjer uten behov. Stryk."
+
+  - id: B14_utropstegn
+    layer: regex
+    scope: document
+    lang: [nb, nn]
+    severity: 1
+    pattern: '!'
+    max_per_1000: 5
+    hint: "Høy utropstegn-tetthet. Behold høyst ett."
+
+  # ---------- C. Struktur (regex-delene) ----------
+  - id: C05_oppsummeringsavslutning
+    layer: regex
+    scope: document
+    lang: [nb, nn]
+    severity: 2
+    pattern: '(?im)^(oppsummert|alt i alt|for å oppsummere|avslutningsvis|konklusjonen er)'
+    hint: "Sluttavsnitt uten ny informasjon. Stryk det; teksten er alt sagt."
+
+  - id: C09_dramatiske_fragmenter
+    layer: regex
+    scope: paragraph
+    lang: [nb, nn]
+    severity: 2
+    pattern: '(?m)\b[A-ZÆØÅ][a-zæøå]+\. [A-ZÆØÅ][a-zæøå]+\. [A-ZÆØÅ][a-zæøå]+\.'
+    hint: "Dramatiske ettordssetninger (\"Enkelt. Effektivt. Trygt.\"). Skriv én vanlig setning."
+
+  - id: C10_noe_som_hale
+    layer: regex
+    scope: paragraph
+    lang: [nb, nn]
+    severity: 2
+    pattern: '(?i), (noe som (understreker|viser|vitner om|bidrar til|gjør)|og bidrar dermed til)'
+    hint: "Påhengt tolkning. Stryk halen; la faktumet stå alene, eller gjør tolkningen til egen setning."
+
+  # ---------- D. Innhold (regex-delene) ----------
+  - id: D03_vag_kilde
+    layer: regex
+    scope: paragraph
+    lang: [nb, nn]
+    severity: 2
+    words: ["studier viser", "forskning viser", "eksperter mener", "mange opplever",
+            "det er bred enighet om"]
+    hint: "Vag kildehenvisning. Navngi kilden eller stryk påstanden."
+
+  - id: D08_ansvarsfraskrivelse
+    layer: regex
+    scope: document
+    lang: [nb, nn]
+    severity: 2
+    words: ["rådfør deg med en fagperson", "kontakt lege", "dette er ikke profesjonell rådgivning"]
+    hint: "Uforespurt forbehold. Stryk med mindre noen faktisk spurte om råd."
+
+  - id: D10_menyavslutning
+    layer: regex
+    scope: document
+    lang: [nb, nn]
+    severity: 3
+    pattern: '(?i)(vil du at jeg skal|gi beskjed (om|hvis) du ønsker|skal jeg .{0,40}\?$)'
+    hint: "Meny-avslutning. Meldingen skal slutte når innholdet er levert."
+
+  # ---------- E. Norskspesifikt ----------
+  - id: E01_kalker
+    layer: regex
+    scope: paragraph
+    lang: [nb, nn]
+    severity: 2
+    words: ["tok et øyeblikk", "i person", "gjøre en forskjell", "på slutten av dagen",
+            "adressere et problem", "adressere problemet", "har du noen gang lurt på"]
+    hint: "Oversatt engelsk idiom. Finn den norske vendingen eller si det rett fram."
+
+  - id: E03_stedsformat
+    layer: regex
+    scope: paragraph
+    lang: [nb, nn]
+    severity: 1
+    pattern: '\b[A-ZÆØÅ][a-zæøå]+, (Norge|Noreg)\b'
+    hint: "Amerikansk stedsformat (\"X, Norge\"). Skriv bare stedsnavnet, eller \"X i Norge\"."
+
+  - id: E06_preposisjonskalker
+    layer: regex
+    scope: paragraph
+    lang: [nb, nn]
+    severity: 1
+    words: ["på en daglig basis", "på daglig basis", "i form av"]
+    hint: "Preposisjonskalk. \"Daglig\" og \"som\" gjør jobben."
+
+  # ---------- F. Kanal- og agentspesifikt ----------
+  - id: F02_hilsen_i_varsel
+    layer: regex
+    scope: document
+    lang: [nb, nn]
+    severity: 3
+    channels: [push, sms, varsel]
+    pattern: '(?im)^(hei|hallo|god (morgen|dag|kveld))\b|((mvh|hilsen|vennlig hilsen)[ ,.!]*$)'
+    hint: "Hilsen eller signatur i et varsel. Stryk; varselet skal bare inneholde saken."
+
+  - id: F06_etikettapning
+    layer: regex
+    scope: document
+    lang: [nb, nn]
+    severity: 2
+    channels: [push, sms, varsel]
+    pattern: '(?im)^(oppdatering|status|info|påminnelse|beskjed|varsel):'
+    hint: "Etikett pluss kolon som åpning. Start med selve faktumet."

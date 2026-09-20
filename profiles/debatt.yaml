@@ -1,0 +1,7 @@
+# Debattinnlegg: kontrast og vurdering er sjangeren. C01/C02 er alt av via
+# genres_off i regelfilen; D06-typen settes rådgivende her.
+pass_score: 0.7
+required_positives: [G02_tar_stilling]
+rules_advisory:
+  - C09_dramatiske_fragmenter
+  - A05_forsterkere

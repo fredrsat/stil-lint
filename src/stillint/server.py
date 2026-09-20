@@ -43,6 +43,26 @@ async def check_text(
 
 
 @mcp.tool()
+async def check_pptx(path: str, mode: str = "fast") -> dict:
+    """Sjekk en PowerPoint-fil (.pptx) for AI-aktige stiltrekk.
+
+    Hver slide sjekkes med slide-profilen (funn merkes med slidenummer),
+    speaker notes sjekkes som prosa. path må være en absolutt sti serveren
+    kan lese. mode: "fast" (lokalt) eller "full" (med Jev-skjønnslaget).
+    """
+    from pathlib import Path
+
+    from .pptx_check import check_deck
+
+    file = Path(path).expanduser()
+    if not file.exists():
+        return {"error": f"Finner ikke filen: {file}"}
+    report = await check_deck(file, mode=mode, engine=_engine)
+    return {"file": report.file, "verdict": report.verdict,
+            "deck": report.deck_result, "notes": report.notes_result}
+
+
+@mcp.tool()
 def list_rules(genre: str | None = None) -> list[dict]:
     """List reglene i kraft, med lag, omfang og alvorlighet. Oppgi genre for å se profilfiltrert liste."""
     from .gate import active_rules

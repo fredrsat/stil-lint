@@ -50,6 +50,12 @@ def test_f06_label_opening():
     assert "F06_etikettapning" in rule_ids("Oppdatering: bussen kommer 07:42.", channel="push")
 
 
+def test_b08_oxford_comma_only_in_lists():
+    assert "B08_oxford_komma" in rule_ids("Vi kjøpte epler, pærer, og bananer.")
+    # Komma foran "og" mellom helsetninger er korrekt norsk.
+    assert "B08_oxford_komma" not in rule_ids("Han kom hjem, og hun dro på jobb.")
+
+
 def test_d10_menu_ending():
     assert "D10_menyavslutning" in rule_ids("Leksene er ferdige. Vil du at jeg skal sette opp en plan?")
 

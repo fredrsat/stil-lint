@@ -35,9 +35,11 @@ rules:
     scope: paragraph
     lang: [nb, nn]
     severity: 2
+    # "med andre ord" (131/mill.), "alt i alt" (52), "når det kommer til" (33),
+    # "til syvende og sist" (17) og "kort sagt" (17) er strøket: vanlige i
+    # menneskelig norsk (bench/report_wordlists.md). Revurderes med LLM-ratio i steg 5.
     words: ["det er viktig å merke seg", "det er verdt å nevne", "la oss se nærmere på",
-            "la oss dykke ned i", "la oss bryte det ned", "kort sagt", "med andre ord",
-            "alt i alt", "til syvende og sist", "når det kommer til"]
+            "la oss dykke ned i", "la oss bryte det ned"]
     hint: "Skiltfrasen sier at noe kommer i stedet for å si det. Stryk den og behold innholdet."
 
   - id: A04_chatbotrester
@@ -139,12 +141,15 @@ rules:
     pattern: '(?m)^#{1,6}\s+(?:[A-ZÆØÅ][a-zæøå]+\s+){2,}[A-ZÆØÅ][a-zæøå]+'
     hint: "Norske overskrifter har stor forbokstav bare i første ord og egennavn."
 
+  # Krever ekte oppramsing (minst to komma-ledd før og/eller): komma foran "og"
+  # mellom helsetninger er korrekt norsk og ga 35 % falske positiver i negativ
+  # kontroll (bench/report_negative_control.md).
   - id: B08_oxford_komma
     layer: regex
     scope: paragraph
     lang: [nb, nn]
     severity: 1
-    pattern: '\w+, (?:og|eller) '
+    pattern: '(?:[\wæøåÆØÅ]+, ){2,}(?:og|eller) [\wæøåÆØÅ]+[.!?,]'
     hint: "Oxford-komma er en anglisisme. Stryk kommaet foran og/eller i oppramsing."
 
   - id: B09_engelske_anforselstegn
@@ -266,8 +271,9 @@ rules:
     scope: paragraph
     lang: [nb, nn]
     severity: 1
-    words: ["på en daglig basis", "på daglig basis", "i form av"]
-    hint: "Preposisjonskalk. \"Daglig\" og \"som\" gjør jobben."
+    # "i form av" er strøket: 74/mill. i menneskelig norsk (bench/report_wordlists.md).
+    words: ["på en daglig basis", "på daglig basis"]
+    hint: "Preposisjonskalk. \"Daglig\" gjør jobben."
 
   # ---------- F. Kanal- og agentspesifikt ----------
   - id: F02_hilsen_i_varsel

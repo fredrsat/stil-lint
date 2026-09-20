@@ -96,13 +96,33 @@ tekst + sjanger + kanal + språk
 | 1 Verifiser Jev-API og prior art | Gjort 2026-09-20 (docs.typesafe.ai, snifftest, slopcheck-jev) |
 | 2 Repo-oppsett | Gjort |
 | 3 Lag 0-1, `mode: fast` uten nøkkel | Gjort |
-| 4 Korpus og baseline-frekvenser | Ikke påbegynt |
-| 5 Parvise norske data, valider A02/E01 | Ikke påbegynt |
+| 4 Korpus og baseline-frekvenser | Gjort: NoReC (42 888 dok, 17,3 mill. token) + wordfreq nb. Se `bench/` |
+| 5 Parvise norske data, valider A02/E01 | Menneske-siden gjort (`bench/report_wordlists.md`); LLM-siden gjenstår |
 | 6 Lag 2 (stat) | Gjort (heuristisk, uten spaCy; terskler er startverdier) |
-| 7 Lag 4 (Jev, ti regler, cache, bånd) | Kode gjort; ikke kjørt mot API (krever nøkkel) |
-| 8 Seeded-fault-eval, norsk vs engelsk spørsmålstekst | Ikke påbegynt |
+| 7 Lag 4 (Jev, ti regler, cache, bånd) | Gjort; verifisert live via OpenRouter |
+| 8 Seeded-fault-eval, norsk vs engelsk spørsmålstekst | Negativ kontroll gjort (alle regler < 5 % FP); seeded faults gjenstår |
 | 9 Gate, profiler, `record_feedback` | Gjort (vekter er startverdier) |
 | 10 Frasebank | Gjort |
 | 11 Koble på bussvarsel-agenten, to ukers logging | Ikke påbegynt |
 
-Kjør testene med `python -m pytest` (33 tester).
+## Korpus og evaluering (`bench/`)
+
+```bash
+sh bench/fetch_corpus.sh                 # kloner NoReC til bench/data/ (gitignorert)
+python bench/build_baseline.py           # n-gram-baseline -> bench/data/baseline_nb.json.gz
+python bench/validate_wordlists.py       # ordlister mot menneskelig frekvens
+python bench/negative_control.py 500     # falsk-positiv-rate per regel på ren tekst
+```
+
+Resultater per 2026-09-20 (`bench/report_wordlists.md`, `bench/report_negative_control.md`):
+
+- Flere fraser fra hypoteselistene viste seg vanlige i menneskelig norsk og er
+  strøket fra tilstedeværelsesreglene ("med andre ord" 131/mill., "alt i alt"
+  52/mill., "i form av" 74/mill.). Endelig dom krever LLM-siden av ratioen (steg 5).
+- B08 (Oxford-komma) flagget 35 % av rene avsnitt før omskriving (komma foran
+  "og" mellom helsetninger er korrekt norsk); etter krav om ekte oppramsing: 0 %.
+- Alle regler ligger nå under 5 %-grensen i negativ kontroll (verst: C08 på 3,4 %).
+- 473 uflaggede NoReC-avsnitt ligger i `bench/data/clean_paragraphs.jsonl` som
+  grunnlag for seeded-fault-evalueringen.
+
+Kjør testene med `python -m pytest` (35 tester).

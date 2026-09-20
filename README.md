@@ -25,10 +25,18 @@ stil-lint rules          # alle regler
 stil-lint serve          # start MCP-serveren (stdio)
 ```
 
-MCP-oppsett (f.eks. i `claude_desktop_config.json` eller `.mcp.json`):
+MCP-oppsett for Claude Code (legges i `~/.claude.json`):
+
+```bash
+claude mcp add stil-lint -e TYPESAFE_API_KEY=... -- stil-lint serve
+```
+
+Utelat `-e TYPESAFE_API_KEY=...` hvis du bare skal bruke `mode: fast`.
+For Claude Desktop eller andre klienter, tilsvarende i JSON:
 
 ```json
-{"mcpServers": {"stil-lint": {"command": "stil-lint", "args": ["serve"]}}}
+{"mcpServers": {"stil-lint": {"command": "stil-lint", "args": ["serve"],
+                              "env": {"TYPESAFE_API_KEY": "..."}}}}
 ```
 
 Verktøy: `check_text`, `list_rules`, `explain_rule`, `record_feedback`, `bank_add`.

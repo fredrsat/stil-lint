@@ -97,7 +97,7 @@ tekst + sjanger + kanal + språk
 | 2 Repo-oppsett | Gjort |
 | 3 Lag 0-1, `mode: fast` uten nøkkel | Gjort |
 | 4 Korpus og baseline-frekvenser | Gjort: NoReC (42 888 dok, 17,3 mill. token) + wordfreq nb. Se `bench/` |
-| 5 Parvise norske data, valider A02/E01 | Menneske-siden gjort (`bench/report_wordlists.md`); LLM-siden gjenstår |
+| 5 Parvise norske data, valider A02/E01 | Gjort: 800 fortsettelser fra 4 modellfamilier (`bench/report_llm_ratio.md`). A05 bekreftet, A12 (nye validerte n-gram) lagt til. Presenslistene trenger egen assistent-register-runde |
 | 6 Lag 2 (stat) | Gjort (heuristisk, uten spaCy; terskler er startverdier) |
 | 7 Lag 4 (Jev, ti regler, cache, bånd) | Gjort; verifisert live via OpenRouter |
 | 8 Seeded-fault-eval, norsk vs engelsk spørsmålstekst | Negativ kontroll gjort (alle regler < 5 % FP); seeded faults gjenstår |
@@ -124,5 +124,17 @@ Resultater per 2026-09-20 (`bench/report_wordlists.md`, `bench/report_negative_c
 - Alle regler ligger nå under 5 %-grensen i negativ kontroll (verst: C08 på 3,4 %).
 - 473 uflaggede NoReC-avsnitt ligger i `bench/data/clean_paragraphs.jsonl` som
   grunnlag for seeded-fault-evalueringen.
+
+LLM-siden (`bench/generate_pairs.py` + `bench/llm_ratio.py`, `bench/report_llm_ratio.md`):
+
+- 800 norske fortsettelser (Reinhart-metoden) fra gpt-5.4-mini, claude-sonnet-4.6,
+  llama-4-maverick og gemini-3.8-flash, nøytral og "skriv menneskelig"-variant.
+- A05 (forsterkere) bekreftet 4-21x overrepresentert på tvers av alle fire familier.
+- Ny regel A12: n-gram 15-113x overrepresentert ("føles både", "det høres kanskje",
+  "resultatet er en" ...), 0 % falske positiver på menneskelig tekst med to-treffs-krav.
+- Fingeravtrykkene er familiespesifikke, som Antislop-artikkelen fant.
+- Viktig forbehold: fortsettelses-oppsettet undertrykker assistent-registeret, så
+  presenslistene (A02, A08) er verken bekreftet eller avkreftet av denne runden.
+  Neste validering bør bruke assistent-oppgaver (svar, meldinger) i stedet.
 
 Kjør testene med `python -m pytest` (35 tester).

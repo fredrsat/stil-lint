@@ -94,6 +94,17 @@ async def main() -> None:
           f"({llm_total/1000:.0f}k token). Baseline: {base['source']} "
           f"({base['tokens']/1e6:.1f} mill. token).")
     print()
+    print("**Viktig forbehold om register:** materialet er *fortsettelser av"
+          " anmeldelser* (Reinhart-metoden). Modellene hermer sjangeren, så"
+          " assistent-registerets stilord (banebrytende, i dagens samfunn,"
+          " chatbot-fraser) forekommer naturlig nok ikke. STRYK i tabellen under"
+          " betyr derfor \"ikke overrepresentert i denne sjangeren\", ikke at"
+          " ordet er friskmeldt i agent- og assistenttekst. Presenslistene"
+          " (A02, A08 m.fl.) må valideres separat med assistent-oppgaver"
+          " (svar på spørsmål, skriv en melding) før de strykes. BEHOLD-dommer"
+          " og nye kandidater er derimot gyldige: de er overrepresentert til"
+          " tross for at modellene prøver å treffe menneskelig sjanger.")
+    print()
 
     # 1. Ordlistevalidering
     config = load_rules()

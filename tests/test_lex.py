@@ -50,6 +50,15 @@ def test_f06_label_opening():
     assert "F06_etikettapning" in rule_ids("Oppdatering: bussen kommer 07:42.", channel="push")
 
 
+def test_a12_validated_ngrams_need_two_hits():
+    two = ("Det høres kanskje rart ut, men resultatet er en plate som treffer. "
+           "Den er overraskende godt produsert og full av detaljer.")
+    one = ("Resultatet er en plate med tolv låter, spilt inn i Oslo i mars, "
+           "med to gjestevokalister og et strykeensemble på fire av sporene.")
+    assert "A12_llm_ngram_validert" in rule_ids(two)
+    assert "A12_llm_ngram_validert" not in rule_ids(one)
+
+
 def test_b08_oxford_comma_only_in_lists():
     assert "B08_oxford_komma" in rule_ids("Vi kjøpte epler, pærer, og bananer.")
     # Komma foran "og" mellom helsetninger er korrekt norsk.

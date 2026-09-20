@@ -50,13 +50,14 @@ rules:
     pattern: '(?i)(håper dette hjelper|gi meg beskjed hvis|^selvfølgelig!|^absolutt!|godt spørsmål|her er en oversikt:|som en (KI|AI)|hope this helps|let me know if|as an AI|\[(Navn|Name|Dato|Date)\])'
     hint: "Chatbot-rest. Stryk hele frasen; mottakeren snakker ikke med en assistent."
 
+  # Korpusvalidert 2026-09-20: 4-21x overrepresentert i LLM-tekst på tvers av
+  # fire modellfamilier (bench/report_llm_ratio.md). "uten tvil" strøket (0x).
   - id: A05_forsterkere
     layer: regex
     scope: paragraph
     lang: [nb, nn]
     severity: 1
-    words: ["ærlig talt", "helt ærlig", virkelig, faktisk, utrolig, genuint, "rett og slett",
-            "uten tvil"]
+    words: ["ærlig talt", "helt ærlig", virkelig, faktisk, utrolig, genuint, "rett og slett"]
     max_per_1000: 6
     hint: "Høy tetthet av forsterkere. Behold høyst én, stryk resten."
 
@@ -88,6 +89,23 @@ rules:
             verktøykassen, byggestein, byggesteiner, fundamentet, kompass]
     max_per_1000: 4
     hint: "Abstrakt metafor-substantiv. Si den konkrete tingen i stedet."
+
+  # Korpusvalidert 2026-09-20 (bench/report_llm_ratio.md): n-gram som er 15-113x
+  # overrepresentert i norsk LLM-tekst mot NoReC-baseline, på tvers av fire
+  # modellfamilier, selv når modellene ble bedt om å skrive menneskelig.
+  # Flagges først ved to treff (ett kan være tilfeldig; menneskefrekvensen er lav
+  # men ikke null).
+  - id: A12_llm_ngram_validert
+    layer: regex
+    scope: paragraph
+    lang: [nb]
+    severity: 2
+    words: ["føles både", "det høres kanskje", "høres kanskje", "overraskende godt",
+            "overraskende bra", "faktisk ganske", "aldri helt", "og det funker",
+            "resultatet er en", "det er nettopp", "på samme tid", "likevel er det",
+            "er tydelig at", "som er både", "vanskelig å ikke", "et usedvanlig"]
+    max_count: 1
+    hint: "Formuleringen er kraftig overrepresentert i LLM-tekst. Si det samme med andre ord, eller stryk vurderingen og la detaljene tale."
 
   # ---------- B. Tegnsetting, typografi, formatering ----------
   - id: B01_tankestrek

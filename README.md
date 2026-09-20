@@ -187,6 +187,7 @@ to every Claude Code session, hooks included.
 | Tool | Purpose |
 | --- | --- |
 | `check_text` | Check a text; returns verdict, findings with hints, positives, missing |
+| `check_pptx` | Check a .pptx by absolute path (slides + notes, findings per slide). Useful from sandboxed clients (e.g. Claude Cowork): the server reads the file, so the client only needs the path |
 | `list_rules` | Rules in effect, optionally filtered by genre profile |
 | `explain_rule` | What a rule looks for, what it deliberately ignores (`not_for`), its hint |
 | `record_feedback` | Mark a finding `riktig` (correct), `feil` (wrong) or `riktig_men_greit` (correct but fine) - calibration data |

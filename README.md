@@ -225,6 +225,35 @@ Design principles, distilled from the research document:
 - **Privacy.** `mode: fast` is fully local. Jev responses are cached keyed on
   hash of (text, question, model); the text itself is never stored.
 
+## The judgment layer: Jev
+
+Layer 4 is [Jev](https://docs.typesafe.ai/), TypeSafe's System One model
+(released September 2026). Jev is not a chat model: it never generates prose.
+You send it a *state* (the text) plus typed questions, and it returns typed
+answers - for this project the **Noul** primitive, a probability that the
+answer to a yes/no question is yes. All questions in a call are answered in
+parallel and independently, so one request per paragraph carries the full rule
+set.
+
+Why it fits this tool:
+
+- **Judgment without generation.** Rules like "is this contrast turn
+  decoration rather than correction?" need reading, not pattern matching - but
+  they don't need an essay back. A probability is exactly the right output,
+  and there is no generated text to hallucinate.
+- **Cheap and fast enough to run on every message.** A full document check is
+  one call per paragraph plus one for the whole text, ~0.7 s and a fraction of
+  the cost of a frontier-model review (which benchmarks slightly better but at
+  ~240x the price - see the research document).
+- **Honest uncertainty.** Jev answers around 0.5 on text it cannot judge, so
+  probabilities in 0.40-0.60 are reported as "no judgment" instead of being
+  interpreted as weak findings.
+
+The questions live in `rules/jev.yaml` with `what`/`not_for`/`criteria`
+fields, are written in Norwegian (measured better than English on Norwegian
+text), and are pinned to a model version so tuned thresholds stay valid. Jev
+is available directly from TypeSafe or through OpenRouter; see Quick start.
+
 ## Rules and profiles
 
 - `rules/lex.yaml` - groups A (word choice), B (punctuation/formatting),

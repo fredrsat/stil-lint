@@ -132,6 +132,7 @@ async def run_jev(
     findings: list[Finding] = []
     positives: dict[str, float] = {}
     no_judgment: list[str] = []
+    in_band: set[str] = set()
     calls = 0
 
     async with httpx.AsyncClient() as client:
@@ -172,6 +173,7 @@ async def run_jev(
                     continue
                 if lo <= p <= hi:
                     no_judgment.append(rule.id)
+                    in_band.add(rule.id)
                     continue
                 if rule.positive:
                     # For positive signaler beholdes høyeste p over dokumentet.
@@ -183,10 +185,11 @@ async def run_jev(
                         keep_if=rule.keep_if, advisory=rule.advisory,
                     ))
 
-    # Positive regler som aldri fikk svar utenfor båndet, rapporteres som lav p,
-    # ikke som funn: gate-en avgjør om det gir "missing".
+    # Positive regler som svarte klart nei, rapporteres som lav p (gate-en avgjør
+    # om det gir "missing"). Regler i ingen-vurdering-båndet holdes utenfor:
+    # "kan ikke vurderes" er ikke det samme som "mangler".
     for rule in jev_rules:
-        if rule.positive and rule.id not in positives:
-            positives.setdefault(rule.id, 0.0)
+        if rule.positive and rule.id not in positives and rule.id not in in_band:
+            positives[rule.id] = 0.0
 
     return findings, positives, sorted(set(no_judgment)), calls

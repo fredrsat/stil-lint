@@ -27,6 +27,10 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("rules", help="List alle regler")
     sub.add_parser("serve", help="Start MCP-serveren")
 
+    bank = sub.add_parser("bank-add", help="Legg en godkjent melding i frasebanken (stdin eller fil)")
+    bank.add_argument("--agent-id", required=True)
+    bank.add_argument("file", nargs="?")
+
     args = parser.parse_args(argv)
     engine = Engine()
 
@@ -39,6 +43,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "serve":
         from .server import main as serve_main
         serve_main()
+        return 0
+
+    if args.cmd == "bank-add":
+        text = Path(args.file).read_text() if args.file else sys.stdin.read()
+        print(engine.bank_add(args.agent_id, text))
         return 0
 
     text = Path(args.file).read_text() if args.file else sys.stdin.read()

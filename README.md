@@ -37,6 +37,7 @@ stil-lint check text.md --mode full
 
 stil-lint rules                        # list all rules
 stil-lint bank-add --agent-id my-agent # remember a sent message (phrase bank)
+stil-lint pptx deck.pptx               # check a PowerPoint deck (needs [pptx] extra)
 stil-lint serve                        # start the MCP server (stdio)
 ```
 
@@ -158,6 +159,23 @@ text itself.
 > `agent_id: weather-agent`. If the verdict is `revise`, fix exactly what the
 > hints say and check once more with `round: 2`. Send when you get `pass` or
 > `pass_with_notes`. After sending, call `bank_add` with the text you sent.
+
+## Checking presentations
+
+`stil-lint pptx deck.pptx` extracts every slide (title + body) and the speaker
+notes. Each slide is checked as one paragraph under the `slide` profile -
+fragments, bullet lists and bold are the medium there, so those rules are off,
+while generic content (D01), forced triads (C02), buzzwords (A02/A12) and
+Title Case in Norwegian titles still count. Deck-level rules see the whole
+presentation, so fractal repetition (C18: the same point on slides 2, 7 and
+12) is caught. Speaker notes are prose and are checked with the prose profile.
+Findings are reported per slide number. Hidden metadata slides (e.g.
+AGENT-META) are skipped.
+
+`hooks/pptx_stop_hook.py` is a Claude Code Stop hook that runs this check on
+recently modified .pptx files and feeds the findings back to Claude once per
+deck version - warn once, never nag. Register it in `~/.claude/settings.json`
+under `hooks.Stop`.
 
 ## MCP tools
 

@@ -71,6 +71,15 @@ def test_engine_clean_alert_passes(tmp_path):
     assert result["verdict"] == "pass"
 
 
+def test_engine_keeps_paragraph_index_zero(tmp_path):
+    engine = Engine(bank_path=tmp_path / "bank.db")
+    result = asyncio.run(engine.check_text(
+        "Det er viktig å merke seg at bussen går 07:42.", genre="sakprosa", mode="fast",
+    ))
+    f = next(f for f in result["findings"] if f["rule"] == "A03_skiltfraser")
+    assert f["paragraph"] == 0
+
+
 def test_phrase_bank_f05(tmp_path):
     engine = Engine(bank_path=tmp_path / "bank.db")
     msg = "Bussen 505 er forsinket i dag, ny avgang klokka 07:50 fra Solligata som vanlig."

@@ -78,7 +78,9 @@ class Engine:
             "round": round_num,
             "max_rounds": max_rounds,
             "findings": [
-                {"id": f"f{i}", **{k: v for k, v in asdict(f).items() if v not in (None, 0, False) or k in ("p", "rule", "layer", "scope", "severity", "hint")}}
+                {"id": f"f{i}", **{k: v for k, v in asdict(f).items()
+                                   if v is not None
+                                   or k in ("p", "rule", "layer", "scope", "severity", "hint", "paragraph")}}
                 for i, f in enumerate(result.findings, 1)
             ],
             "positives": result.positives,

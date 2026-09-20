@@ -31,6 +31,11 @@ def main(argv: list[str] | None = None) -> int:
     bank.add_argument("--agent-id", required=True)
     bank.add_argument("file", nargs="?")
 
+    pptx = sub.add_parser("pptx", help="Sjekk en PowerPoint-presentasjon (slides + speaker notes)")
+    pptx.add_argument("file")
+    pptx.add_argument("--mode", choices=["fast", "full"], default="fast")
+    pptx.add_argument("--json", action="store_true")
+
     args = parser.parse_args(argv)
     engine = Engine()
 
@@ -44,6 +49,17 @@ def main(argv: list[str] | None = None) -> int:
         from .server import main as serve_main
         serve_main()
         return 0
+
+    if args.cmd == "pptx":
+        from .pptx_check import check_deck, format_report
+        report = asyncio.run(check_deck(Path(args.file), mode=args.mode, engine=engine))
+        if args.json:
+            print(json.dumps({"file": report.file, "verdict": report.verdict,
+                              "deck": report.deck_result, "notes": report.notes_result},
+                             ensure_ascii=False, indent=2))
+        else:
+            print(format_report(report))
+        return 0 if report.verdict == "pass" else 1
 
     if args.cmd == "bank-add":
         text = Path(args.file).read_text() if args.file else sys.stdin.read()

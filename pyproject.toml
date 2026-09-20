@@ -11,7 +11,8 @@ dependencies = [
 
 [project.optional-dependencies]
 stat = ["spacy>=3.7"]
-dev = ["pytest>=8"]
+pptx = ["python-pptx>=1.0"]
+dev = ["pytest>=8", "python-pptx>=1.0"]
 
 [project.scripts]
 stil-lint = "stillint.cli:main"

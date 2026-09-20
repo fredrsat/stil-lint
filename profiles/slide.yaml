@@ -1,0 +1,21 @@
+# Presentasjoner (pptx). Slides bryter prosanormene med vilje: fragmenter,
+# lister og fet skrift er selve mediet, så de reglene er av. Det som teller:
+# generisk innhold (D01), tvungne tretall (C02), stilord (A02/A12) og at
+# hver slide faktisk sier noe konkret (G01).
+pass_score: 0.75
+required_positives: [G01_konkret_detalj]
+rules_off:
+  - C08_ensartet_rytme        # korte tekstblokker, rytmemål gir ikke mening
+  - C09_dramatiske_fragmenter # fragmenter er normalformen på slides
+  - C11_nominalisering
+  - A11_koblingsord
+  - B03_fet_tetthet           # utheving er verktøyet på slides
+  - B04_fet_etikett
+  - B05_struktur_vs_lengde    # struktur ER formatet
+  - B12_pynt                  # piler og skillelinjer er legitime i diagram
+  - C06_halsrensk             # første "avsnitt" er tittelslide
+rules_advisory:
+  - C05_oppsummeringsavslutning  # en oppsummeringsslide er ofte ønsket
+  - C04_oppsummerende_slutt
+thresholds:
+  D05_folelse_ikke_mekanisme: 0.8

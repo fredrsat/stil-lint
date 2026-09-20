@@ -177,6 +177,25 @@ rules:
     hint: "Finn den norske vendingen, eller skriv setningen på nytt uten det engelske mønsteret."
     keep_if: "Formuleringen er et etablert lånord i domenet."
 
+  - id: C18_fraktal_gjentakelse
+    layer: jev
+    scope: document
+    lang: [nb, nn, en]
+    severity: 2
+    what: |
+      Det samme poenget sies flere ganger utover i teksten (eller på flere
+      slides) uten at gjentakelsene tilfører noe nytt: samme påstand i
+      innledning, hoveddel og avslutning, bare med andre ord.
+    not_for: |
+      En bevisst oppsummering som er merket som oppsummering. Et refreng i
+      retorisk tekst der gjentakelsen er poenget. Faglig nødvendig repetisjon
+      av en definisjon.
+    criteria:
+      "true": "Minst ett poeng gjentas i flere deler uten ny informasjon eller nytt belegg."
+      "false": "Hver del tilfører noe eget; eventuelle gjentakelser er merket oppsummering."
+    hint: "Si poenget én gang, der det treffer best. Stryk de andre forekomstene eller erstatt dem med belegg."
+    keep_if: "Gjentakelsen er en merket oppsummering eller et bevisst refreng."
+
   # ---------- G. Positive signaler (teller FOR teksten) ----------
   - id: G01_konkret_detalj
     layer: jev

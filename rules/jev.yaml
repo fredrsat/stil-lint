@@ -34,16 +34,18 @@ rules:
     severity: 1
     genres_off: [debatt]
     what: |
-      En oppramsing har tre sideordnede ledd ("rask, trygg og enkel") der leddene
-      ikke er tre klart forskjellige ting: minst ett ledd gjentar, overlapper med
-      eller tilfører ingenting utover de andre. Spørsmålet er om de tre leddene er
-      reelt sideordnede og hver for seg nødvendige.
+      Minst én setning ramser opp nøyaktig tre egenskaper eller kvaliteter i
+      rekke ("rask, enkel og effektiv"). Spørsmålet er om tretallet er retorisk:
+      leddene er generelle honnørord, ingen av dem underbygges med eksempel
+      eller begrunnelse i avsnittet, og minst ett ledd kunne strykes uten at
+      innholdet endret seg.
     not_for: |
-      Tre ledd som faktisk er tre forskjellige, konkrete ting.
+      Oppramsinger av tre konkrete, forskjellige ting (gjenstander, navn,
+      hendelser). Ledd som underbygges andre steder i avsnittet.
       Oppramsinger med to eller fire ledd.
     criteria:
-      "true": "Minst én tre-leddsoppramsing der leddene ikke er tre reelt forskjellige ting."
-      "false": "Ingen tre-leddsoppramsing, eller alle ledd er hver for seg nødvendige."
+      "true": "Det finnes en tre-leddsoppramsing av ubegrunnede honnørord der minst ett ledd er overflødig."
+      "false": "Ingen slik oppramsing, eller leddene er konkrete og hver for seg underbygget."
     hint: "Stryk leddet som ikke tilfører noe, eller behold bare det presise."
     keep_if: "Alle tre leddene er hver for seg sanne og nødvendige."
 
@@ -141,14 +143,19 @@ rules:
     lang: [nb, nn]
     severity: 2
     what: |
-      Teksten sier hvordan noe oppleves (trygt, enkelt, kraftfullt, sømløst) uten
-      å si hva det gjør eller hvordan det virker.
+      Minst én setning tilskriver en ting en opplevelseskvalitet (trygg, enkel,
+      sømløs, kraftfull, gjennomarbeidet) uten at den setningen eller
+      nabosetningene sier hva som gjør tingen slik. Vurder setning for setning:
+      finnes det en påstand om opplevelse som står helt uten mekanisme,
+      egenskap eller eksempel bak seg?
     not_for: |
-      Tekst som beskriver både opplevelse og mekanisme. Sjangre der opplevelsen
-      er saken (anmeldelser).
+      Opplevelsespåstander som følges av forklaring eller eksempel.
+      Anmeldelser og personlige erfaringer der opplevelsen selv er saken
+      ("jeg ble rørt", "platen låter varm"): der er opplevelsen et vitnesbyrd,
+      ikke en påstand om en mekanisme.
     criteria:
-      "true": "Avsnittet har opplevelsesord uten en eneste mekanisme bak dem."
-      "false": "Avsnittet forklarer hva tingen gjør, eventuelt i tillegg til hvordan den oppleves."
+      "true": "Minst én opplevelsespåstand står uten noe i teksten som underbygger den."
+      "false": "Alle opplevelsespåstander er underbygget, eller det finnes ingen."
     hint: "Bytt opplevelsesordet med hva tingen faktisk gjør."
     keep_if: "Sjangeren er anmeldelse eller personlig erfaring."
 

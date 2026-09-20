@@ -47,7 +47,10 @@ rules:
     scope: document
     lang: [nb, nn, en]
     severity: 3
-    pattern: '(?i)(håper dette hjelper|gi meg beskjed hvis|^selvfølgelig!|^absolutt!|godt spørsmål|her er en oversikt:|som en (KI|AI)|hope this helps|let me know if|as an AI|\[(Navn|Name|Dato|Date)\])'
+    # Plassholder-mønsteret utvidet 2026-09-20: assistentrunden viste at modellene
+    # skriver "[Ditt navn]", "[ditt telefonnummer]" o.l. (bench/report_assistant.md).
+    # (?!\() unngår markdown-lenker.
+    pattern: '(?im)(håper dette hjelper|gi meg beskjed hvis|^selvfølgelig!|^absolutt!|godt spørsmål|her er en oversikt:|som en (KI|AI)|hope this helps|let me know if|as an AI|\[(?:ditt|din|dine|navn|name|dato|date|e-?post|telefon|adresse|sted|klokkeslett)[^\]\n]{0,40}\](?!\())'
     hint: "Chatbot-rest. Stryk hele frasen; mottakeren snakker ikke med en assistent."
 
   # Korpusvalidert 2026-09-20: 4-21x overrepresentert i LLM-tekst på tvers av

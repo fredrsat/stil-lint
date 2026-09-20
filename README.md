@@ -97,10 +97,10 @@ tekst + sjanger + kanal + språk
 | 2 Repo-oppsett | Gjort |
 | 3 Lag 0-1, `mode: fast` uten nøkkel | Gjort |
 | 4 Korpus og baseline-frekvenser | Gjort: NoReC (42 888 dok, 17,3 mill. token) + wordfreq nb. Se `bench/` |
-| 5 Parvise norske data, valider A02/E01 | Gjort: 800 fortsettelser fra 4 modellfamilier (`bench/report_llm_ratio.md`). A05 bekreftet, A12 (nye validerte n-gram) lagt til. Presenslistene trenger egen assistent-register-runde |
+| 5 Parvise norske data, valider A02/E01 | Gjort: 800 fortsettelser + 128 assistentsvar fra 4 modellfamilier (`bench/report_llm_ratio.md`, `bench/report_assistant.md`). A05 bekreftet, A12 lagt til, A04 utvidet med plassholder-mønster. Presenslistene forblir presisjonsregler (for sjeldne til å måles på 26k token, 0 FP-kostnad) |
 | 6 Lag 2 (stat) | Gjort (heuristisk, uten spaCy; terskler er startverdier) |
 | 7 Lag 4 (Jev, ti regler, cache, bånd) | Gjort; verifisert live via OpenRouter |
-| 8 Seeded-fault-eval, norsk vs engelsk spørsmålstekst | Negativ kontroll gjort (alle regler < 5 % FP); seeded faults gjenstår |
+| 8 Seeded-fault-eval, norsk vs engelsk spørsmålstekst | Gjort (`bench/report_seeded_faults.md`): regex-laget 90-100 %, Jev-reglene 70-100 % etter spørsmålsomskriving (C02: 0->100 %, D05: 10->80 %). Norsk spørsmålstekst slår engelsk (C04: 100 mot 60 %, E01: 70 mot 30 %) - norsk beholdes. Jev-negativ kontroll: D05 5 % etter not_for-fiks + terskel 0,8 |
 | 9 Gate, profiler, `record_feedback` | Gjort (vekter er startverdier) |
 | 10 Frasebank | Gjort |
 | 11 Koble på bussvarsel-agenten, to ukers logging | Ikke påbegynt |

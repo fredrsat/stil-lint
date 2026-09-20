@@ -1,3 +1,6 @@
 # Sakprosa: hele katalogen, standardterskler.
 pass_score: 0.75
 required_positives: [G01_konkret_detalj]
+thresholds:
+  # Støyende regel (15 % FP på anmeldelser ved 0,7, se bench/report_negative_control_jev.md)
+  D05_folelse_ikke_mekanisme: 0.8

@@ -30,6 +30,12 @@ def test_a04_chatbot():
     assert "A04_chatbotrester" in rule_ids("Her er oversikten du ba om. Håper dette hjelper!")
 
 
+def test_a04_placeholder():
+    assert "A04_chatbotrester" in rule_ids("Med vennlig hilsen\n[Ditt navn]")
+    assert "A04_chatbotrester" in rule_ids("Ring meg på [ditt telefonnummer] i morgen.")
+    assert "A04_chatbotrester" not in rule_ids("Se [dokumentasjonen](https://example.com) for detaljer.")
+
+
 def test_b07_title_case():
     assert "B07_title_case_no" in rule_ids("# Fem Grunner Til Suksess\n\nInnhold her.")
     assert "B07_title_case_no" not in rule_ids("# Fem grunner til suksess\n\nInnhold her.")

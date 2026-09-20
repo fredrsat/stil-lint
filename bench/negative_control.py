@@ -53,14 +53,14 @@ def sample_paragraphs(n: int, seed: int = 42) -> list[dict]:
     return out
 
 
-async def main(n: int) -> None:
+async def main(n: int, mode: str = "fast") -> None:
     paragraphs = sample_paragraphs(n)
     engine = Engine()
     flagged: Counter = Counter()
     clean: list[dict] = []
 
     for para in paragraphs:
-        result = await engine.check_text(para["text"], genre="sakprosa", mode="fast")
+        result = await engine.check_text(para["text"], genre="sakprosa", mode=mode)
         rules = {f["rule"] for f in result["findings"]}
         for rule in rules:
             flagged[rule] += 1
@@ -68,7 +68,7 @@ async def main(n: int) -> None:
             clean.append(para)
 
     total = len(paragraphs)
-    print(f"# Negativ kontroll: {total} avsnitt fra NoReC (bokmål, t.o.m. 2019), mode=fast\n")
+    print(f"# Negativ kontroll: {total} avsnitt fra NoReC (bokmål, t.o.m. 2019), mode={mode}\n")
     print("| regel | flagget | andel | status |")
     print("| --- | --- | --- | --- |")
     for rule, count in flagged.most_common():
@@ -78,12 +78,15 @@ async def main(n: int) -> None:
     if not flagged:
         print("| (ingen) | 0 | 0% | ok |")
 
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    with open(OUT, "w") as fh:
-        for para in clean:
-            fh.write(json.dumps(para, ensure_ascii=False) + "\n")
-    print(f"\n{len(clean)} uflaggede avsnitt skrevet til {OUT.relative_to(BENCH.parent)}")
+    # Bare fast-modus definerer seed-settet; full-modus skal ikke krympe det.
+    if mode == "fast":
+        OUT.parent.mkdir(parents=True, exist_ok=True)
+        with open(OUT, "w") as fh:
+            for para in clean:
+                fh.write(json.dumps(para, ensure_ascii=False) + "\n")
+        print(f"\n{len(clean)} uflaggede avsnitt skrevet til {OUT.relative_to(BENCH.parent)}")
 
 
 if __name__ == "__main__":
-    asyncio.run(main(int(sys.argv[1]) if len(sys.argv) > 1 else 500))
+    asyncio.run(main(int(sys.argv[1]) if len(sys.argv) > 1 else 500,
+                     sys.argv[2] if len(sys.argv) > 2 else "fast"))

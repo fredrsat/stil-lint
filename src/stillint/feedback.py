@@ -19,7 +19,9 @@ def record(rule: str, verdict: str, genre: str | None = None,
         raise ValueError(f"verdict må være en av {VERDICTS}")
     path = Path(db_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path)
+    conn = sqlite3.connect(path, timeout=30, check_same_thread=False)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=30000")
     conn.execute(
         "CREATE TABLE IF NOT EXISTS feedback ("
         " rule TEXT NOT NULL, verdict TEXT NOT NULL, genre TEXT, comment TEXT, ts REAL NOT NULL)"

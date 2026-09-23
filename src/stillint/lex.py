@@ -53,9 +53,9 @@ def run_lex(pre: PreprocessedText, rules: list[Rule], channel: str | None) -> li
             if _over_limit(rule, len(hits), pre.word_count):
                 findings.append(_finding(rule, None, hits))
         else:
+            # Overskrifter sjekkes også: titler (særlig på slides) bærer ofte
+            # nettopp stilordene og kontrastvendingene reglene ser etter.
             for para in pre.paragraphs:
-                if para.is_heading:
-                    continue
                 hits = _matches(rule, para.text)
                 para_words = len(re.findall(r"\S+", para.text))
                 if _over_limit(rule, len(hits), para_words):

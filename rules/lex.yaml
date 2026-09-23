@@ -111,14 +111,16 @@ rules:
     hint: "Formuleringen er kraftig overrepresentert i LLM-tekst. Si det samme med andre ord, eller stryk vurderingen og la detaljene tale."
 
   # ---------- B. Tegnsetting, typografi, formatering ----------
+  # Skjerpet 2026-09-22 etter felt-tilbakemelding: em-tankestrek (—) er feil på
+  # norsk uansett mellomrom (norsk bruker – med mellomrom), så første forekomst
+  # flagges. Engelsk tekst er unntatt: der er — legitim typografi.
   - id: B01_tankestrek
     layer: regex
     scope: paragraph
-    lang: [nb, nn, en]
+    lang: [nb, nn]
     severity: 1
-    pattern: '\w—\w'
-    max_count: 1
-    hint: "Engelsk em dash uten mellomrom. Norsk tankestrek har mellomrom rundt seg – slik."
+    pattern: '—'
+    hint: "Em-tankestrek (—) er engelsk typografi. Norsk tankestrek er – med mellomrom rundt."
 
   - id: B02_kolonavsloring
     layer: regex

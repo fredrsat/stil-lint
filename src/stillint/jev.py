@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import os
+import re
 import sqlite3
 import time
 from pathlib import Path
@@ -125,7 +126,9 @@ async def run_jev(
     jev_rules = [r for r in active_rules if r.layer == "jev" and pre.lang in r.lang]
     doc_rules = [r for r in jev_rules if r.scope == "document"]
     para_rules = [r for r in jev_rules if r.scope == "paragraph"]
-    prose = [p for p in pre.paragraphs if not p.is_heading]
+    # Overskrifter er med: en slidetittel som "Ikke bare X - også Y" er nettopp
+    # det C01 skal se. Ordgulvet (5) siler bare bort fragmenter Jev ikke kan lese.
+    prose = list(pre.paragraphs)
 
     # Modell-ID kan overstyres per miljø: OpenRouter bruker "jev-1.13"/"jev-latest",
     # direkte-API-et "jev-1.13.0". Cache-nøkkelen bruker samme resolverte ID.
@@ -161,7 +164,8 @@ async def run_jev(
         if doc_rules:
             prepare(pre.cleaned, doc_rules, None)
         for para in prose:
-            if para_rules and len(para.text.split()) >= 8:
+            words = len(re.findall(r"[\wæøåÆØÅ]+", para.text))
+            if para_rules and words >= 5:
                 prepare(para.text, para_rules, para.index)
 
         for state, paragraph, rules, answers, task in tasks:

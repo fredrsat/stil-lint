@@ -65,6 +65,17 @@ def test_a12_validated_ngrams_need_two_hits():
     assert "A12_llm_ngram_validert" not in rule_ids(one)
 
 
+def test_b01_single_em_dash_fires():
+    assert "B01_tankestrek" in rule_ids("Ikke bare styrende—også utførende.")
+    assert "B01_tankestrek" in rule_ids("Ikke bare styrende — også utførende.")
+    # Norsk tankestrek med mellomrom er korrekt.
+    assert "B01_tankestrek" not in rule_ids("Styrende – og utførende – roller.")
+
+
+def test_headings_are_checked():
+    assert "A02_stilord_nb" in rule_ids("# En sømløs og banebrytende reise\n\nInnhold her.")
+
+
 def test_b08_oxford_comma_only_in_lists():
     assert "B08_oxford_komma" in rule_ids("Vi kjøpte epler, pærer, og bananer.")
     # Komma foran "og" mellom helsetninger er korrekt norsk.

@@ -9,6 +9,7 @@
 | B09_engelske_anforselstegn | 2 | 0.4% | ok |
 | C11_nominalisering | 1 | 0.2% | ok |
 | A10_metaforsubstantiv | 1 | 0.2% | ok |
+| B15_mistenkelig_unicode | 1 | 0.2% | ok |
 | B02_kolonavsloring | 1 | 0.2% | ok |
 
-467 uflaggede avsnitt skrevet til bench/data/clean_paragraphs.jsonl
+466 uflaggede avsnitt skrevet til bench/data/clean_paragraphs.jsonl

@@ -31,6 +31,16 @@ rules:
     severity: 2
     hint: "Overskrifter og lister i en kort tekst. Skriv løpende prosa."
 
+  # LLM-artefakter i tegnsettet: macron-bokstaver (ā, ō), kombinerende
+  # overstrek, myk bindestrek, null-bredde-tegn og smale harde mellomrom.
+  # Idé fra prose-sanitiser (researchdok del 5). Funnene navngir tegnene.
+  - id: B15_mistenkelig_unicode
+    layer: stat
+    scope: paragraph
+    lang: [nb, nn, en]
+    severity: 2
+    hint: "Fjern tegnet og bruk vanlig norsk tegnsett. Slike tegn er LLM-artefakter og vises feil i mange fonter."
+
   - id: F01_for_langt_varsel
     layer: stat
     scope: document

@@ -28,6 +28,25 @@ MIN_SENTENCES_FOR_CONNECTOR = 5
 STRUCTURE_WORD_LIMIT = 120    # B05: struktur i tekst kortere enn dette
 CHANNEL_MAX_SENTENCES = {"push": 2, "sms": 3, "varsel": 2}
 
+# B15: LLM-artefakter i tegnsettet. Vanlig NBSP (U+00A0) er utelatt - den er
+# korrekt norsk mellom tall og enhet.
+SUSPICIOUS_CHARS = {
+    "\u00ad": "U+00AD myk bindestrek",
+    "\u200b": "U+200B null-bredde-mellomrom",
+    "\u200c": "U+200C null-bredde-ikkesammenbinder",
+    "\u200d": "U+200D null-bredde-sammenbinder",
+    "\u200e": "U+200E venstre-mot-h\u00f8yre-merke",
+    "\u200f": "U+200F h\u00f8yre-mot-venstre-merke",
+    "\u2060": "U+2060 ordsammenbinder",
+    "\ufeff": "U+FEFF byte order mark",
+    "\u202f": "U+202F smalt hardt mellomrom",
+    "\u2028": "U+2028 linjeskilletegn",
+    "\u2029": "U+2029 avsnittsskilletegn",
+    "\u0304": "U+0304 kombinerende macron",
+    "\u0305": "U+0305 kombinerende overstrek",
+}
+MACRON_LETTERS = set("\u0101\u0113\u012b\u014d\u016b\u01d6\u0100\u0112\u012a\u014c\u016a\u01d5")
+
 
 def sentences(text: str) -> list[str]:
     return [s for s in SENTENCE_SPLIT.split(text.strip()) if s]
@@ -59,6 +78,21 @@ def run_stat(pre: PreprocessedText, rules: list[Rule], channel: str | None) -> l
         ))
 
     prose = [p for p in pre.paragraphs if not p.is_heading and not p.is_list]
+
+    # B15: mistenkelig Unicode - sjekkes i ALLE avsnitt, også overskrifter
+    for para in pre.paragraphs:
+        found: dict[str, int] = {}
+        for ch in para.text:
+            if ch in SUSPICIOUS_CHARS:
+                name = SUSPICIOUS_CHARS[ch]
+            elif ch in MACRON_LETTERS:
+                name = f"U+{ord(ch):04X} bokstav med macron ({ch})"
+            else:
+                continue
+            found[name] = found.get(name, 0) + 1
+        if found:
+            emit("B15_mistenkelig_unicode", para.index,
+                 ", ".join(f"{name} x{n}" for name, n in sorted(found.items())))
 
     # C08: ensartet setningslengde per avsnitt
     for para in prose:

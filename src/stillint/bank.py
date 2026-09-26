@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import hashlib
 import re
-import sqlite3
 import time
 from pathlib import Path
+
+from . import db
 
 SHINGLE_SIZE = 6
 OVERLAP_THRESHOLD = 0.5
@@ -32,11 +33,7 @@ def _shingles(text: str, size: int = SHINGLE_SIZE) -> set[str]:
 class PhraseBank:
     def __init__(self, db_path: Path | str = DEFAULT_DB):
         self.db_path = Path(db_path)
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        # WAL + busy_timeout: tåler parallelle kall mot samme bank.
-        self.conn = sqlite3.connect(self.db_path, timeout=30, check_same_thread=False)
-        self.conn.execute("PRAGMA journal_mode=WAL")
-        self.conn.execute("PRAGMA busy_timeout=30000")
+        self.conn = db.connect(self.db_path)
         self.conn.execute(
             "CREATE TABLE IF NOT EXISTS shingles ("
             " agent_id TEXT NOT NULL, shingle TEXT NOT NULL, ts REAL NOT NULL,"

@@ -45,6 +45,24 @@ def test_b05_structure_in_short_text():
     assert "B05_struktur_vs_lengde" in rule_ids(text)
 
 
+def test_b15_suspicious_unicode():
+    assert "B15_mistenkelig_unicode" in rule_ids("Ordet st\u0101r med macron her.")
+    assert "B15_mistenkelig_unicode" in rule_ids("Usynlig\u200btegn i ordet.")
+    assert "B15_mistenkelig_unicode" in rule_ids("Myk\u00adbindestrek i ordet.")
+    assert "B15_mistenkelig_unicode" not in rule_ids(
+        "Vanlig norsk tekst \u2013 med tankestrek og \u00abanf\u00f8rselstegn\u00bb.")
+
+
+def test_b15_names_the_characters():
+    from stillint.preprocess import preprocess
+    from stillint.stat import run_stat
+    pre = preprocess("To\u202fusynlige\u202ftegn og \u0101 her.")
+    findings = [f for f in run_stat(pre, RULES, None) if f.rule == "B15_mistenkelig_unicode"]
+    assert len(findings) == 1
+    assert "U+202F smalt hardt mellomrom x2" in findings[0].evidence
+    assert "macron" in findings[0].evidence
+
+
 def test_lix_sane():
     easy = "Bussen kommer klokka åtte. Vi rekker skolen fint. Husk sekken din."
     hard = ("Kommunestyret vedtok i går kveld en omfattende reguleringsplan for "

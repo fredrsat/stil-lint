@@ -15,9 +15,10 @@ import asyncio
 import hashlib
 import os
 import re
-import sqlite3
 import time
 from pathlib import Path
+
+from . import db
 
 import httpx
 
@@ -52,12 +53,7 @@ def api_url() -> str:
 
 class _Cache:
     def __init__(self, path: Path = CACHE_DB):
-        path.parent.mkdir(parents=True, exist_ok=True)
-        # WAL + busy_timeout: parallelle kall (flere samtidige check_text/check_pptx)
-        # deler denne databasen og skal vente på hverandre, ikke feile med "locked".
-        self.conn = sqlite3.connect(path, timeout=30, check_same_thread=False)
-        self.conn.execute("PRAGMA journal_mode=WAL")
-        self.conn.execute("PRAGMA busy_timeout=30000")
+        self.conn = db.connect(path)
         self.conn.execute(
             "CREATE TABLE IF NOT EXISTS answers (key TEXT PRIMARY KEY, p REAL NOT NULL, ts REAL NOT NULL)"
         )

@@ -255,6 +255,19 @@ fields, are written in Norwegian (measured better than English on Norwegian
 text), and are pinned to a model version so tuned thresholds stay valid. Jev
 is available directly from TypeSafe or through OpenRouter; see Quick start.
 
+**Local alternatives - tried, not viable yet (2026-09).** We piloted
+[DEEM](https://labs.libertai.io/papers/deem-open-machine-reflexes/), the
+open-weight `/v1/systemone` implementation, as a local drop-in
+(`TYPESAFE_BASE_URL=http://localhost:8300`). Result, in short: deem-0.8 says
+yes to nearly everything on Norwegian (98% false positives on clean human text
+for one rule) and is unusable as a judge; deem-9b showed genuinely promising
+Norwegian judgment in smoke tests but needs more than 24 GB of memory in bf16,
+so it could not be evaluated properly. Full numbers and paths forward in
+[`bench/report_deem.md`](bench/report_deem.md). The client supports pluggable
+backends (`TYPESAFE_BASE_URL`, `TYPESAFE_MODEL`, `TYPESAFE_TIMEOUT`,
+`STILLINT_JEV_SERIAL`), so a stronger local model is a two-variable switch
+when one appears.
+
 ## Rules and profiles
 
 - `rules/lex.yaml` - groups A (word choice), B (punctuation/formatting),

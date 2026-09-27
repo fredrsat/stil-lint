@@ -32,6 +32,15 @@ BASE_URL_ENV = "TYPESAFE_BASE_URL"
 DEFAULT_BASE_URL = "https://api.typesafe.ai"
 API_KEY_ENV = "TYPESAFE_API_KEY"
 MODEL_ENV = "TYPESAFE_MODEL"
+TIMEOUT_ENV = "TYPESAFE_TIMEOUT"   # sekunder per kall; lokale backends trenger mer enn sky
+SERIAL_ENV = "STILLINT_JEV_SERIAL"  # sett til 1 for å sende kall ett og ett (skjøre lokale servere)
+
+
+def _timeout() -> float:
+    try:
+        return float(os.environ.get(TIMEOUT_ENV, "30"))
+    except ValueError:
+        return 30.0
 
 
 CACHE_DB = Path.home() / ".stil-lint" / "jev-cache.db"
@@ -92,12 +101,19 @@ async def _call(client: httpx.AsyncClient, state: str, questions: dict[str, dict
     payload = {"state": state, "model": model, "questions": questions}
     delay = 1.0
     for attempt in range(MAX_RETRIES):
-        resp = await client.post(
-            api_url(),
-            json=payload,
-            headers={"Authorization": f"Bearer {api_key()}"},
-            timeout=30.0,
-        )
+        try:
+            resp = await client.post(
+                api_url(),
+                json=payload,
+                headers={"Authorization": f"Bearer {api_key()}"},
+                timeout=_timeout(),
+            )
+        except httpx.HTTPError as exc:
+            if attempt < MAX_RETRIES - 1:
+                await asyncio.sleep(delay)
+                delay *= 2
+                continue
+            raise JevError(f"Jev-API nettverksfeil: {exc!r}") from exc
         if resp.status_code in (429, 500, 502, 503) and attempt < MAX_RETRIES - 1:
             await asyncio.sleep(delay)
             delay *= 2
@@ -105,7 +121,11 @@ async def _call(client: httpx.AsyncClient, state: str, questions: dict[str, dict
         if resp.status_code != 200:
             raise JevError(f"Jev-API svarte {resp.status_code}: {resp.text[:300]}")
         data = resp.json()
-        return {qid: ans["noul"] for qid, ans in data.get("answers", {}).items() if "noul" in ans}
+        # TypeSafe svarer {"noul": p}; DEEM (åpen /v1/systemone-implementasjon)
+        # svarer {"value": p}. Godta begge.
+        return {qid: (ans.get("noul") if ans.get("noul") is not None else ans.get("value"))
+                for qid, ans in data.get("answers", {}).items()
+                if ans.get("noul") is not None or ans.get("value") is not None}
     raise JevError("Jev-API: tomt for forsøk")
 
 
@@ -138,8 +158,13 @@ async def run_jev(
     in_band: set[str] = set()
     calls = 0
 
+    # Kall sendes normalt samtidig (0,7 s vs 3,2 s per dokument, jf. slopcheck).
+    # STILLINT_JEV_SERIAL=1 sender dem ett og ett - for lokale servere som ikke
+    # tåler samtidige forespørsler.
+    serial = os.environ.get(SERIAL_ENV) == "1"
+
     async with httpx.AsyncClient() as client:
-        tasks: list[tuple[str | None, int | None, list[Rule], dict[str, dict], asyncio.Task | None]] = []
+        tasks = []
 
         def prepare(state: str, rules: list[Rule], paragraph: int | None):
             nonlocal calls
@@ -153,7 +178,10 @@ async def run_jev(
                     questions[rule.id] = _question_payload(rule)
             task = None
             if questions:
-                task = asyncio.ensure_future(_call(client, state, questions, model))
+                coro = _call(client, state, questions, model)
+                # En bar korutine startes først når den awaites (serielt);
+                # ensure_future starter den umiddelbart (parallelt).
+                task = coro if serial else asyncio.ensure_future(coro)
                 calls += 1
             tasks.append((state, paragraph, rules, cached, task))
 

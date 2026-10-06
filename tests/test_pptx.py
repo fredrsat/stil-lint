@@ -74,3 +74,114 @@ def test_clean_deck_passes(tmp_path):
 
     report = asyncio.run(check_deck(path, mode="fast", engine=Engine(bank_path=tmp_path / "b.db")))
     assert report.deck_result["findings"] == []
+
+
+def _payload_from_deck(deck):
+    return [{"number": s.number, "title": s.title, "body": s.body, "notes": s.notes}
+            for s in extract_slides(deck)]
+
+
+def test_check_slides_matches_check_deck(tmp_path):
+    from stillint.pptx_check import check_slides, slides_from_payload
+
+    deck = build_deck(tmp_path / "deck.pptx")
+    engine = Engine(bank_path=tmp_path / "b.db")
+    via_file = asyncio.run(check_deck(deck, mode="fast", engine=engine))
+    via_text = asyncio.run(check_slides(slides_from_payload(_payload_from_deck(deck)),
+                                        mode="fast", engine=engine))
+    assert via_text.verdict == via_file.verdict == "revise"
+    key = lambda r: sorted((f["rule"], f.get("slide"), f.get("p")) for f in r["findings"])  # noqa: E731
+    assert key(via_text.deck_result) == key(via_file.deck_result)
+    assert key(via_text.notes_result) == key(via_file.notes_result)
+    assert [s.skipped for s in via_text.slides] == [False, False, True]  # AGENT-META via payload
+
+
+def test_slides_from_payload_aliases_and_hidden():
+    from stillint.pptx_check import slides_from_payload
+
+    slides = slides_from_payload([
+        {"n": 3, "text": "Punkt A\nPunkt B", "title": "Tittel"},
+        {"body": "Skjult", "hidden": True},
+        "bare en streng",
+    ])
+    assert [s.number for s in slides] == [3, 2, 3]
+    assert slides[0].body == "Punkt A\nPunkt B" and slides[0].title == "Tittel"
+    assert slides[1].skipped and not slides[0].skipped
+    assert slides[2].body == "bare en streng"
+
+
+def test_hidden_slide_is_skipped(tmp_path):
+    from pptx import Presentation
+
+    prs = Presentation()
+    s = prs.slides.add_slide(prs.slide_layouts[1])
+    s.shapes.title.text = "Synlig"
+    s.placeholders[1].text = "Salget økte 12 %"
+    h = prs.slides.add_slide(prs.slide_layouts[1])
+    h.shapes.title.text = "En Sømløs Og Banebrytende Reise"
+    h.placeholders[1].text = "sømløs banebrytende synergi"
+    h._element.set("show", "0")
+    path = tmp_path / "hidden.pptx"
+    prs.save(str(path))
+
+    slides = extract_slides(path)
+    assert [sl.skipped for sl in slides] == [False, True]
+    report = asyncio.run(check_deck(path, mode="fast", engine=Engine(bank_path=tmp_path / "b.db")))
+    assert report.deck_result["findings"] == []
+
+
+def test_mcp_check_slides_tool(tmp_path):
+    from stillint import server
+
+    deck = build_deck(tmp_path / "deck.pptx")
+    out = asyncio.run(server.check_slides(_payload_from_deck(deck)))
+    assert out["verdict"] == "revise"
+    assert out["slides_checked"] == [1, 2] and out["slides_skipped"] == [3]
+    assert any(f.get("slide") == 2 for f in out["deck"]["findings"])
+
+    missing = asyncio.run(server.check_pptx("/mnt/user-data/outputs/finnes-ikke.pptx"))
+    assert "check_slides" in missing["hint"]
+
+
+def test_extract_reads_tables_and_groups(tmp_path):
+    from pptx import Presentation
+    from pptx.util import Inches
+
+    prs = Presentation()
+    s = prs.slides.add_slide(prs.slide_layouts[5])
+    s.shapes.title.text = "Tall for kvartalet"
+    tbl = s.shapes.add_table(2, 2, Inches(1), Inches(2), Inches(6), Inches(1)).table
+    tbl.cell(0, 0).text = "Omsetning"
+    tbl.cell(0, 1).text = "4,2 mill. kr"
+    tbl.cell(1, 0).text = "Sømløs og banebrytende synergi"
+    tbl.cell(1, 1).text = "Nøkkelen til vekst"
+    grp = s.shapes.add_group_shape()
+    box = grp.shapes.add_textbox(Inches(1), Inches(4), Inches(4), Inches(1))
+    box.text_frame.text = "Tekst inne i en gruppe"
+    prs.save(str(tmp_path / "t.pptx"))
+
+    slides = extract_slides(tmp_path / "t.pptx")
+    assert slides[0].title == "Tall for kvartalet"
+    assert "Omsetning | 4,2 mill. kr" in slides[0].body
+    assert "Tekst inne i en gruppe" in slides[0].body
+
+    report = asyncio.run(check_deck(tmp_path / "t.pptx", mode="fast",
+                                    engine=Engine(bank_path=tmp_path / "b.db")))
+    assert any(f["rule"] == "A02_stilord_nb" and f.get("slide") == 1
+               for f in report.deck_result["findings"])
+
+
+def test_skill_script_matches_server_extraction(tmp_path):
+    """Skriptet i skills/ er frittstående og må gi samme payload som extract_slides."""
+    import json
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    script = Path(__file__).resolve().parents[1] / "skills/stil-lint-pptx/scripts/extract_slides.py"
+    deck = build_deck(tmp_path / "deck.pptx")
+    ext = json.loads(subprocess.check_output([sys.executable, str(script), str(deck)]))
+    srv = extract_slides(deck)
+    assert [(e["number"], e["title"], e["body"], e["notes"]) for e in ext] == \
+           [(s.number, s.title, s.body, s.notes) for s in srv]
+    assert ext[2]["hidden"] is False and ext[2]["title"] == "AGENT-META"

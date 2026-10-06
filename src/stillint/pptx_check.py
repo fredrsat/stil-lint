@@ -43,6 +43,32 @@ class DeckReport:
         return "pass"
 
 
+def _shape_texts(shapes) -> list[tuple[object, str]]:
+    """Alle tekstbærende figurer på en slide, rekursivt gjennom grupper og
+    med tabellceller lest radvis. Returnerer (figur, tekst)-par i leserekkefølge."""
+    from pptx.enum.shapes import MSO_SHAPE_TYPE
+
+    out: list[tuple[object, str]] = []
+    for shape in shapes:
+        if shape.shape_type == MSO_SHAPE_TYPE.GROUP:
+            out.extend(_shape_texts(shape.shapes))
+            continue
+        if getattr(shape, "has_table", False) and shape.has_table:
+            rows = []
+            for row in shape.table.rows:
+                cells = [c.text.strip() for c in row.cells if c.text.strip()]
+                if cells:
+                    rows.append(" | ".join(dict.fromkeys(cells)))  # sammenslåtte celler én gang
+            if rows:
+                out.append((shape, "\n".join(rows)))
+            continue
+        if shape.has_text_frame:
+            text = "\n".join(p.text for p in shape.text_frame.paragraphs if p.text.strip())
+            if text:
+                out.append((shape, text))
+    return out
+
+
 def extract_slides(path: Path) -> list[SlideText]:
     from pptx import Presentation
 
@@ -51,13 +77,9 @@ def extract_slides(path: Path) -> list[SlideText]:
     for i, slide in enumerate(prs.slides, start=1):
         title = ""
         lines: list[str] = []
-        for shape in slide.shapes:
-            if not shape.has_text_frame:
-                continue
-            text = "\n".join(p.text for p in shape.text_frame.paragraphs if p.text.strip())
-            if not text:
-                continue
-            if shape == slide.shapes.title:
+        title_shape = slide.shapes.title
+        for shape, text in _shape_texts(slide.shapes):
+            if title_shape is not None and shape == title_shape:
                 title = text.strip()
             else:
                 lines.append(text)
@@ -65,9 +87,35 @@ def extract_slides(path: Path) -> list[SlideText]:
         if slide.has_notes_slide and slide.notes_slide.notes_text_frame is not None:
             notes = slide.notes_slide.notes_text_frame.text.strip()
         body = "\n".join(lines).strip()
-        # Skjulte metadata-slides (f.eks. AGENT-META fra agent-meta-pptx) skal ikke lintes.
-        skipped = title.upper().startswith("AGENT-META") or body.upper().startswith("AGENT-META")
-        slides.append(SlideText(number=i, title=title, body=body, notes=notes, skipped=skipped))
+        hidden = slide._element.get("show") == "0"
+        slides.append(SlideText(number=i, title=title, body=body, notes=notes,
+                                skipped=hidden or _is_meta(title, body)))
+    return slides
+
+
+def _is_meta(title: str, body: str) -> bool:
+    """Metadata-slides (f.eks. AGENT-META fra agent-meta-pptx) skal ikke lintes."""
+    return title.upper().startswith("AGENT-META") or body.upper().startswith("AGENT-META")
+
+
+def slides_from_payload(items: list[dict]) -> list[SlideText]:
+    """Bygg SlideText fra dicts sendt av en klient som har hentet ut teksten selv.
+
+    Hvert element: {"number": 1, "title": "...", "body": "...", "notes": "...",
+    "hidden": false}. Alle felt utenom number er valgfrie; "text" godtas som
+    alias for "body" og "n" for "number". Mangler number, telles fra 1.
+    """
+    slides: list[SlideText] = []
+    for i, item in enumerate(items, start=1):
+        if isinstance(item, str):
+            item = {"body": item}
+        number = int(item.get("number", item.get("n", i)))
+        title = str(item.get("title") or "").strip()
+        body = str(item.get("body") or item.get("text") or "").strip()
+        notes = str(item.get("notes") or "").strip()
+        hidden = bool(item.get("hidden", False))
+        slides.append(SlideText(number=number, title=title, body=body, notes=notes,
+                                skipped=hidden or _is_meta(title, body)))
     return slides
 
 
@@ -77,9 +125,17 @@ def _one_paragraph(text: str) -> str:
 
 
 async def check_deck(path: Path, mode: str = "fast", engine: Engine | None = None) -> DeckReport:
+    """Hent ut tekst fra en .pptx på disk og sjekk den."""
+    return await check_slides(extract_slides(path), mode=mode, engine=engine, label=str(path))
+
+
+async def check_slides(slides: list[SlideText], mode: str = "fast",
+                       engine: Engine | None = None, label: str = "<slides>") -> DeckReport:
+    """Sjekk allerede uthentet lysbildetekst. Brukes av både check_deck og
+    MCP-verktøyet check_slides, slik at resultatet blir det samme uansett om
+    serveren leste fila selv eller klienten sendte teksten."""
     engine = engine or Engine()
-    slides = extract_slides(path)
-    report = DeckReport(file=str(path), slides=slides)
+    report = DeckReport(file=label, slides=slides)
 
     checkable = [s for s in slides if not s.skipped and (s.title or s.body)]
     if checkable:
@@ -122,6 +178,8 @@ def format_report(report: DeckReport) -> str:
             lines.append(f"        {f['hint']}")
             if f.get("evidence"):
                 lines.append(f"        treff: {f['evidence']}")
+            if f.get("sentence"):
+                lines.append(f"        setning: {f['sentence']}")
         for m in result["missing"]:
             lines.append(f"    MANGLER: {m}")
     return "\n".join(lines)

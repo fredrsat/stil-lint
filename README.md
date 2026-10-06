@@ -40,6 +40,7 @@ stil-lint check text.md --mode full
 stil-lint rules                        # list all rules
 stil-lint bank-add --agent-id my-agent # remember a sent message (phrase bank)
 stil-lint pptx deck.pptx               # check a PowerPoint deck (needs [pptx] extra)
+stil-lint feedback                     # summarise recorded feedback per rule and genre
 stil-lint serve                        # start the MCP server (stdio)
 ```
 
@@ -174,6 +175,18 @@ presentation, so fractal repetition (C18: the same point on slides 2, 7 and
 Findings are reported per slide number. Hidden metadata slides (e.g.
 AGENT-META) are skipped.
 
+Text inside tables and grouped shapes is included.
+
+### From Claude Desktop, claude.ai and other sandboxed clients
+
+When the deck is created in a sandbox (claude.ai file creation, cloud Cowork),
+the server cannot open the path, so the client sends the text instead:
+`skills/stil-lint-pptx/` is a skill that tells the agent to extract the text
+with the bundled `scripts/extract_slides.py` and call `check_slides`. Add the
+folder as a skill in Claude Desktop / claude.ai (or copy it to
+`~/.claude/skills/` for Claude Code). Findings carry `slide`, `hint`,
+`sentence` and `keep_if`, so the agent can fix the deck and re-check.
+
 `hooks/pptx_stop_hook.py` is a Claude Code Stop hook that runs this check on
 recently modified .pptx files and feeds the findings back to Claude once per
 deck version - warn once, never nag. Register it in `~/.claude/settings.json`
@@ -187,14 +200,21 @@ to every Claude Code session, hooks included.
 | Tool | Purpose |
 | --- | --- |
 | `check_text` | Check a text; returns verdict, findings with hints, positives, missing |
-| `check_pptx` | Check a .pptx by absolute path (slides + notes, findings per slide). Useful from sandboxed clients (e.g. Claude Cowork): the server reads the file, so the client only needs the path |
+| `check_pptx` | Check a .pptx by absolute path (slides + notes, findings per slide). Only works when the file is on the same machine as the server (Claude Code, local Cowork) |
+| `check_slides` | Same check, but the client sends the text per slide (`{number, title, body, notes, hidden}`). Use this from clients that create files elsewhere (claude.ai / Claude Desktop file creation, cloud sandboxes). Hidden slides and AGENT-META are skipped |
 | `list_rules` | Rules in effect, optionally filtered by genre profile |
 | `explain_rule` | What a rule looks for, what it deliberately ignores (`not_for`), its hint |
-| `record_feedback` | Mark a finding `riktig` (correct), `feil` (wrong) or `riktig_men_greit` (correct but fine) - calibration data |
+| `record_feedback` | Mark a finding `riktig` (correct), `feil` (wrong) or `riktig_men_greit` (correct but fine), with the `evidence`/`sentence` it concerned - calibration data |
 | `bank_add` | Add a sent message to the agent's phrase bank |
 
 `riktig_men_greit` matters: it is the data that lets severity be tuned per
-genre over time.
+genre over time. `stil-lint feedback` summarises the verdicts per rule and
+genre and recommends what to do: tighten or drop a rule with too many `feil`,
+make a rule advisory in a genre where it is mostly `riktig_men_greit`.
+
+Regex findings include `sentence`, the sentence (or bullet) that contained the
+first hit, so an agent can fix the exact spot instead of re-reading the
+paragraph.
 
 ## Architecture
 

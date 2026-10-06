@@ -25,6 +25,9 @@ def main(argv: list[str] | None = None) -> int:
     check.add_argument("--json", action="store_true", help="Rått JSON-svar")
 
     sub.add_parser("rules", help="List alle regler")
+    fb = sub.add_parser("feedback", help="Oppsummer tilbakemeldinger per regel og sjanger")
+    fb.add_argument("--genre", default=None)
+    fb.add_argument("--json", action="store_true")
     sub.add_parser("serve", help="Start MCP-serveren")
 
     bank = sub.add_parser("bank-add", help="Legg en godkjent melding i frasebanken (stdin eller fil)")
@@ -43,6 +46,13 @@ def main(argv: list[str] | None = None) -> int:
         for r in engine.config.rules:
             flags = "+" if r.positive else ("råd" if r.advisory else str(r.severity))
             print(f"{r.id:35s} {r.layer:6s} {r.scope:9s} sev={flags}")
+        return 0
+
+    if args.cmd == "feedback":
+        from . import feedback
+        rows = feedback.summary(genre=args.genre)
+        print(json.dumps(rows, ensure_ascii=False, indent=2) if args.json
+              else feedback.format_summary(rows))
         return 0
 
     if args.cmd == "serve":
@@ -85,6 +95,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"      {f['hint']}")
             if f.get("evidence"):
                 print(f"      treff: {f['evidence']}")
+            if f.get("sentence"):
+                print(f"      setning: {f['sentence']}")
         for m_ in result["missing"]:
             print(f"  MANGLER: {m_}")
         if result["no_judgment"]:

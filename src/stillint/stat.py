@@ -10,10 +10,9 @@ import re
 import statistics
 
 from .lex import Finding
-from .preprocess import PreprocessedText
+from .preprocess import PreprocessedText, sentences
 from .rules import Rule
 
-SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-ZÆØÅ«\"])")
 CONNECTORS = ("dessuten", "i tillegg", "videre", "samtidig", "imidlertid", "derfor",
               "dermed", "følgelig", "på den annen side")
 # Nominaliserings-heuristikk: avledningssuffikser på substantiv.
@@ -46,10 +45,6 @@ SUSPICIOUS_CHARS = {
     "\u0305": "U+0305 kombinerende overstrek",
 }
 MACRON_LETTERS = set("\u0101\u0113\u012b\u014d\u016b\u01d6\u0100\u0112\u012a\u014c\u016a\u01d5")
-
-
-def sentences(text: str) -> list[str]:
-    return [s for s in SENTENCE_SPLIT.split(text.strip()) if s]
 
 
 def lix(text: str) -> float:

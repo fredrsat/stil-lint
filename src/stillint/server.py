@@ -1,4 +1,4 @@
-"""MCP-server (FastMCP) med de fem verktøyene fra researchdokumentet del 7."""
+"""MCP-server (FastMCP) med verktøyene fra researchdokumentet del 7, pluss check_pptx/check_slides."""
 
 from __future__ import annotations
 
@@ -44,11 +44,13 @@ async def check_text(
 
 @mcp.tool()
 async def check_pptx(path: str, mode: str = "fast") -> dict:
-    """Sjekk en PowerPoint-fil (.pptx) for AI-aktige stiltrekk.
+    """Sjekk en PowerPoint-fil (.pptx) som ligger på samme maskin som serveren.
 
     Hver slide sjekkes med slide-profilen (funn merkes med slidenummer),
     speaker notes sjekkes som prosa. path må være en absolutt sti serveren
-    kan lese. mode: "fast" (lokalt) eller "full" (med Jev-skjønnslaget).
+    kan lese. Lager du fila i et annet miljø (sandkasse, sky, annen maskin),
+    bruk check_slides og send teksten i stedet.
+    mode: "fast" (lokalt) eller "full" (med Jev-skjønnslaget).
     """
     from pathlib import Path
 
@@ -56,10 +58,47 @@ async def check_pptx(path: str, mode: str = "fast") -> dict:
 
     file = Path(path).expanduser()
     if not file.exists():
-        return {"error": f"Finner ikke filen: {file}"}
+        return {
+            "error": f"Finner ikke filen: {file}",
+            "hint": ("stil-lint-serveren kjører på en annen maskin enn der fila ble laget, "
+                     "og kan bare lese sitt eget filsystem. Hent ut tittel, punkter og "
+                     "notater per slide (f.eks. med python-pptx) og kall check_slides "
+                     "med teksten i stedet."),
+        }
     report = await check_deck(file, mode=mode, engine=_engine)
+    return _deck_response(report)
+
+
+@mcp.tool()
+async def check_slides(slides: list[dict], mode: str = "fast") -> dict:
+    """Sjekk lysbildetekst uten at serveren trenger tilgang til .pptx-fila.
+
+    Bruk dette når fila ligger et annet sted enn serveren (sandkasse, sky).
+    Klienten henter ut teksten selv og sender ett element per slide:
+      {"number": 1, "title": "Tittel", "body": "punkt 1\npunkt 2",
+       "notes": "speaker notes", "hidden": false}
+    title, body, notes og hidden er valgfrie. Skjulte slides og AGENT-META
+    hoppes over. Sjekken er identisk med check_pptx: slide-profil på tittel
+    og punkter (funn merkes med slidenummer), sakprosa-profil på notatene.
+    mode: "fast" (lokalt) eller "full" (med Jev-skjønnslaget).
+    """
+    from .pptx_check import check_slides as _check_slides
+    from .pptx_check import slides_from_payload
+
+    try:
+        parsed = slides_from_payload(slides)
+    except (TypeError, ValueError, AttributeError) as e:
+        return {"error": f"Ugyldig slides-format: {e}",
+                "expected": [{"number": 1, "title": "...", "body": "...", "notes": "..."}]}
+    report = await _check_slides(parsed, mode=mode, engine=_engine)
+    return _deck_response(report)
+
+
+def _deck_response(report) -> dict:
     return {"file": report.file, "verdict": report.verdict,
-            "deck": report.deck_result, "notes": report.notes_result}
+            "deck": report.deck_result, "notes": report.notes_result,
+            "slides_checked": [s.number for s in report.slides if not s.skipped],
+            "slides_skipped": [s.number for s in report.slides if s.skipped]}
 
 
 @mcp.tool()
@@ -93,9 +132,14 @@ def explain_rule(id: str) -> dict:
 
 
 @mcp.tool()
-def record_feedback(rule: str, verdict: str, genre: str | None = None, comment: str | None = None) -> dict:
-    """Registrer om et funn var riktig, feil eller riktig_men_greit. Brukes til kalibrering."""
-    return feedback_store.record(rule, verdict, genre=genre, comment=comment)
+def record_feedback(rule: str, verdict: str, genre: str | None = None,
+                    comment: str | None = None, evidence: str | None = None) -> dict:
+    """Registrer om et funn var riktig, feil eller riktig_men_greit. Brukes til kalibrering.
+
+    evidence: treffet eller setningen funnet gjaldt (feltene evidence/sentence i
+    funnet), slik at dommen kan etterprøves senere.
+    """
+    return feedback_store.record(rule, verdict, genre=genre, comment=comment, evidence=evidence)
 
 
 @mcp.tool()

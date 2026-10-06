@@ -100,3 +100,16 @@ def test_clean_paragraph_no_findings():
     text = ("Bussen til skolen går 07:42 fra Solligata. Ta med regnjakke, for "
             "det er meldt 4 mm regn mellom 08 og 10. Husk gymtøy i dag.")
     assert rule_ids(text, channel="push") == set()
+
+
+def test_finding_carries_sentence():
+    import asyncio
+
+    from stillint.engine import Engine
+
+    text = ("Salget økte 12 % i tredje kvartal. Vår sømløse og banebrytende plattform "
+            "er nøkkelen til synergi. Tre nye kunder kom til i Bergen.")
+    out = asyncio.run(Engine().check_text(text, genre="sakprosa", mode="fast"))
+    f = next(f for f in out["findings"] if f["rule"] == "A02_stilord_nb")
+    assert f["sentence"].startswith("Vår sømløse")
+    assert "Salget" not in f["sentence"]

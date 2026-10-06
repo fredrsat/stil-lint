@@ -14,6 +14,7 @@ FRONT_MATTER_RE = re.compile(r"\A---\n.*?\n---\n", re.DOTALL)
 FENCED_CODE_RE = re.compile(r"^(```|~~~).*?^\1\s*$", re.DOTALL | re.MULTILINE)
 INLINE_CODE_RE = re.compile(r"`[^`\n]+`")
 BLOCKQUOTE_RE = re.compile(r"^>.*$", re.MULTILINE)
+SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-ZÆØÅ«\"])")
 
 # Stoppord for språkgjetting. Nynorsk og bokmål skilles på markørord.
 _NB = {"ikke", "jeg", "en", "et", "hva", "hvordan", "noe", "mye", "være", "blitt", "fra", "også", "å", "og", "det", "som", "på", "med", "har", "til", "av", "om"}
@@ -53,6 +54,23 @@ def detect_lang(text: str) -> str:
     if any(w in _NN_MARKERS for w in words) and nn >= nb:
         return "nn"
     return "nb"
+
+
+def sentences(text: str) -> list[str]:
+    return [s for s in SENTENCE_SPLIT.split(text.strip()) if s]
+
+
+def sentence_with(text: str, needle: str) -> str | None:
+    """Setningen (eller linja) i text som inneholder needle. Linjeskift regnes
+    som setningsgrense, så punkter på en slide gir hvert sitt treff."""
+    if not needle:
+        return None
+    low = needle.lower()
+    for line in text.splitlines():
+        for sent in sentences(line):
+            if low in sent.lower():
+                return sent.strip()
+    return None
 
 
 def split_paragraphs(text: str) -> list[Paragraph]:

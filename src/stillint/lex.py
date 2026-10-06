@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from .preprocess import PreprocessedText
+from .preprocess import PreprocessedText, sentence_with
 from .rules import Rule
 
 
@@ -22,6 +22,7 @@ class Finding:
     evidence: str | None = None
     count: int = 0
     advisory: bool = False
+    sentence: str | None = None  # setningen med første treff (regex-laget)
 
 
 def _matches(rule: Rule, text: str) -> list[str]:
@@ -51,7 +52,7 @@ def run_lex(pre: PreprocessedText, rules: list[Rule], channel: str | None) -> li
         if rule.scope == "document":
             hits = _matches(rule, pre.cleaned)
             if _over_limit(rule, len(hits), pre.word_count):
-                findings.append(_finding(rule, None, hits))
+                findings.append(_finding(rule, None, hits, pre.cleaned))
         else:
             # Overskrifter sjekkes også: titler (særlig på slides) bærer ofte
             # nettopp stilordene og kontrastvendingene reglene ser etter.
@@ -59,11 +60,12 @@ def run_lex(pre: PreprocessedText, rules: list[Rule], channel: str | None) -> li
                 hits = _matches(rule, para.text)
                 para_words = len(re.findall(r"\S+", para.text))
                 if _over_limit(rule, len(hits), para_words):
-                    findings.append(_finding(rule, para.index, hits))
+                    findings.append(_finding(rule, para.index, hits, para.text))
     return findings
 
 
-def _finding(rule: Rule, paragraph: int | None, hits: list[str]) -> Finding:
+def _finding(rule: Rule, paragraph: int | None, hits: list[str], text: str) -> Finding:
+    first = next((h.strip() for h in hits if h.strip()), "")
     return Finding(
         rule=rule.id,
         layer="regex",
@@ -76,4 +78,5 @@ def _finding(rule: Rule, paragraph: int | None, hits: list[str]) -> Finding:
         evidence=", ".join(dict.fromkeys(h.strip() for h in hits[:5])) or None,
         count=len(hits),
         advisory=rule.advisory,
+        sentence=sentence_with(text, first),
     )

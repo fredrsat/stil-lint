@@ -15,6 +15,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .engine import Engine
+from .lex import Finding
+
+# F08: notat regnes som "langt" når det er både over NOTES_MIN_WORDS ord og
+# over NOTES_RATIO ganger ordtallet på sliden. Begge kravene så et kort
+# notat på en nesten tom tittelslide ikke flagges.
+NOTES_MIN_WORDS = 80
+NOTES_RATIO = 3.0
 
 
 @dataclass
@@ -124,16 +131,58 @@ def _one_paragraph(text: str) -> str:
     return re.sub(r"\n\s*\n", "\n", text).strip()
 
 
-async def check_deck(path: Path, mode: str = "fast", engine: Engine | None = None) -> DeckReport:
+async def check_deck(path: Path, mode: str = "fast", engine: Engine | None = None,
+                     notes_requested: bool | None = None) -> DeckReport:
     """Hent ut tekst fra en .pptx på disk og sjekk den."""
-    return await check_slides(extract_slides(path), mode=mode, engine=engine, label=str(path))
+    return await check_slides(extract_slides(path), mode=mode, engine=engine,
+                              label=str(path), notes_requested=notes_requested)
+
+
+def _words(text: str) -> int:
+    return len(re.findall(r"\S+", text))
+
+
+def notes_findings(notes: list[SlideText], engine: Engine, notes_requested: bool | None) -> list[Finding]:
+    """F07/F08: notater som ikke er bestilt, eller som er mye lengre enn sliden.
+
+    notes_requested=True: ingen av reglene. False: F07 (ett dokumentfunn med
+    slidene listet). None (ukjent): bare F08 som råd per slide.
+    paragraph-indeksen er posisjonen i notes-lista, som check_slides mapper
+    til slidenummer.
+    """
+    if notes_requested is True or not notes:
+        return []
+    out: list[Finding] = []
+    f07 = engine.config.by_id("F07_ubestilte_notater")
+    f08 = engine.config.by_id("F08_lange_notater")
+    if notes_requested is False and f07:
+        out.append(Finding(
+            rule=f07.id, layer="stat", scope="document", paragraph=None, p=1.0,
+            severity=f07.severity, hint=f07.hint, keep_if=f07.keep_if, advisory=f07.advisory,
+            evidence="notater på slide " + ", ".join(str(s.number) for s in notes),
+            count=len(notes),
+        ))
+    if f08:
+        for idx, s in enumerate(notes):
+            n_notes, n_slide = _words(s.notes), _words(f"{s.title} {s.body}")
+            if n_notes >= NOTES_MIN_WORDS and n_notes > NOTES_RATIO * max(n_slide, 1):
+                out.append(Finding(
+                    rule=f08.id, layer="stat", scope="paragraph", paragraph=idx, p=1.0,
+                    severity=f08.severity, hint=f08.hint, keep_if=f08.keep_if, advisory=f08.advisory,
+                    evidence=f"{n_notes} ord i notatet mot {n_slide} på sliden",
+                ))
+    return out
 
 
 async def check_slides(slides: list[SlideText], mode: str = "fast",
-                       engine: Engine | None = None, label: str = "<slides>") -> DeckReport:
+                       engine: Engine | None = None, label: str = "<slides>",
+                       notes_requested: bool | None = None) -> DeckReport:
     """Sjekk allerede uthentet lysbildetekst. Brukes av både check_deck og
     MCP-verktøyet check_slides, slik at resultatet blir det samme uansett om
-    serveren leste fila selv eller klienten sendte teksten."""
+    serveren leste fila selv eller klienten sendte teksten.
+
+    notes_requested: om brukeren ba om speaker notes. False gir F07 når det
+    finnes notater; None (ukjent) gir bare rådet F08 på lange notater."""
     engine = engine or Engine()
     report = DeckReport(file=label, slides=slides)
 
@@ -156,7 +205,9 @@ async def check_slides(slides: list[SlideText], mode: str = "fast",
     notes = [s for s in slides if not s.skipped and s.notes]
     if notes:
         notes_text = "\n\n".join(_one_paragraph(s.notes) for s in notes)
-        report.notes_result = await engine.check_text(notes_text, genre="sakprosa", mode=mode)
+        report.notes_result = await engine.check_text(
+            notes_text, genre="sakprosa", mode=mode,
+            extra_findings=notes_findings(notes, engine, notes_requested))
         index_to_slide = {idx: s.number for idx, s in enumerate(notes)}
         for finding in report.notes_result["findings"]:
             if finding.get("paragraph") is not None:

@@ -39,7 +39,7 @@ stil-lint check text.md --mode full
 
 stil-lint rules                        # list all rules
 stil-lint bank-add --agent-id my-agent # remember a sent message (phrase bank)
-stil-lint pptx deck.pptx               # check a PowerPoint deck (needs [pptx] extra)
+stil-lint pptx deck.pptx --no-notes-requested   # check a deck; flag speaker notes nobody asked for
 stil-lint feedback                     # summarise recorded feedback per rule and genre
 stil-lint serve                        # start the MCP server (stdio)
 ```
@@ -177,6 +177,13 @@ AGENT-META) are skipped.
 
 Text inside tables and grouped shapes is included.
 
+Speaker notes are a common dumping ground for AI-written decks. Pass
+`notes_requested` (tool parameter, or `--notes-requested` /
+`--no-notes-requested` on the CLI): when notes were not requested and the deck
+has them, F07 flags it. When unknown, F08 advises on notes that are much
+longer than the slide they belong to. The bundled skill tells the agent not to
+write notes unless asked, and to always pass the parameter.
+
 ### From Claude Desktop, claude.ai and other sandboxed clients
 
 When the deck is created in a sandbox (claude.ai file creation, cloud Cowork),
@@ -200,7 +207,7 @@ to every Claude Code session, hooks included.
 | Tool | Purpose |
 | --- | --- |
 | `check_text` | Check a text; returns verdict, findings with hints, positives, missing |
-| `check_pptx` | Check a .pptx by absolute path (slides + notes, findings per slide). Only works when the file is on the same machine as the server (Claude Code, local Cowork) |
+| `check_pptx` | Check a .pptx by absolute path (slides + notes, findings per slide, `notes_requested`). Only works when the file is on the same machine as the server (Claude Code, local Cowork) |
 | `check_slides` | Same check, but the client sends the text per slide (`{number, title, body, notes, hidden}`). Use this from clients that create files elsewhere (claude.ai / Claude Desktop file creation, cloud sandboxes). Hidden slides and AGENT-META are skipped |
 | `list_rules` | Rules in effect, optionally filtered by genre profile |
 | `explain_rule` | What a rule looks for, what it deliberately ignores (`not_for`), its hint |

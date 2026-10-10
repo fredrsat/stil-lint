@@ -55,3 +55,21 @@ rules:
     lang: [nb, nn, en]
     severity: 2
     hint: "Samme formulering som en tidligere melding fra samme agent. Varier, eller send bare det som er nytt."
+
+  # ---------- Speaker notes i presentasjoner (pptx_check) ----------
+  - id: F07_ubestilte_notater
+    layer: stat
+    scope: document
+    lang: [nb, nn, en]
+    severity: 2
+    hint: "Speaker notes som ikke er bestilt. Stryk dem; notatfeltet er ikke en dumpeplass for det som ikke fikk plass på sliden."
+    keep_if: "brukeren ba uttrykkelig om talemanus eller notater"
+
+  - id: F08_lange_notater
+    layer: stat
+    scope: paragraph
+    lang: [nb, nn, en]
+    severity: 1
+    advisory: true
+    hint: "Notatet er mye lengre enn selve sliden. Var det bestilt? Hvis ikke, stryk eller kort ned til det som skal sies."
+    keep_if: "brukeren ba om talemanus"

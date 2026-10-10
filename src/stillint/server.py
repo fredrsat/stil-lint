@@ -43,7 +43,7 @@ async def check_text(
 
 
 @mcp.tool()
-async def check_pptx(path: str, mode: str = "fast") -> dict:
+async def check_pptx(path: str, mode: str = "fast", notes_requested: bool | None = None) -> dict:
     """Sjekk en PowerPoint-fil (.pptx) som ligger på samme maskin som serveren.
 
     Hver slide sjekkes med slide-profilen (funn merkes med slidenummer),
@@ -51,6 +51,8 @@ async def check_pptx(path: str, mode: str = "fast") -> dict:
     kan lese. Lager du fila i et annet miljø (sandkasse, sky, annen maskin),
     bruk check_slides og send teksten i stedet.
     mode: "fast" (lokalt) eller "full" (med Jev-skjønnslaget).
+    notes_requested: oppgi alltid. False = brukeren ba ikke om speaker notes,
+    så notater i dekket flagges (F07). True = notater er bestilt.
     """
     from pathlib import Path
 
@@ -65,12 +67,13 @@ async def check_pptx(path: str, mode: str = "fast") -> dict:
                      "notater per slide (f.eks. med python-pptx) og kall check_slides "
                      "med teksten i stedet."),
         }
-    report = await check_deck(file, mode=mode, engine=_engine)
+    report = await check_deck(file, mode=mode, engine=_engine, notes_requested=notes_requested)
     return _deck_response(report)
 
 
 @mcp.tool()
-async def check_slides(slides: list[dict], mode: str = "fast") -> dict:
+async def check_slides(slides: list[dict], mode: str = "fast",
+                       notes_requested: bool | None = None) -> dict:
     """Sjekk lysbildetekst uten at serveren trenger tilgang til .pptx-fila.
 
     Bruk dette når fila ligger et annet sted enn serveren (sandkasse, sky).
@@ -81,6 +84,8 @@ async def check_slides(slides: list[dict], mode: str = "fast") -> dict:
     hoppes over. Sjekken er identisk med check_pptx: slide-profil på tittel
     og punkter (funn merkes med slidenummer), sakprosa-profil på notatene.
     mode: "fast" (lokalt) eller "full" (med Jev-skjønnslaget).
+    notes_requested: oppgi alltid. False = brukeren ba ikke om speaker notes,
+    så notater i dekket flagges (F07). True = notater er bestilt.
     """
     from .pptx_check import check_slides as _check_slides
     from .pptx_check import slides_from_payload
@@ -90,7 +95,7 @@ async def check_slides(slides: list[dict], mode: str = "fast") -> dict:
     except (TypeError, ValueError, AttributeError) as e:
         return {"error": f"Ugyldig slides-format: {e}",
                 "expected": [{"number": 1, "title": "...", "body": "...", "notes": "..."}]}
-    report = await _check_slides(parsed, mode=mode, engine=_engine)
+    report = await _check_slides(parsed, mode=mode, engine=_engine, notes_requested=notes_requested)
     return _deck_response(report)
 
 

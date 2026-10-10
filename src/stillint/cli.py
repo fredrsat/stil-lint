@@ -38,6 +38,8 @@ def main(argv: list[str] | None = None) -> int:
     pptx.add_argument("file")
     pptx.add_argument("--mode", choices=["fast", "full"], default="fast")
     pptx.add_argument("--json", action="store_true")
+    pptx.add_argument("--notes-requested", action=argparse.BooleanOptionalAction, default=None,
+                      help="Om speaker notes var bestilt (--no-notes-requested flagger notater)")
 
     args = parser.parse_args(argv)
     engine = Engine()
@@ -62,7 +64,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "pptx":
         from .pptx_check import check_deck, format_report
-        report = asyncio.run(check_deck(Path(args.file), mode=args.mode, engine=engine))
+        report = asyncio.run(check_deck(Path(args.file), mode=args.mode, engine=engine,
+                                        notes_requested=args.notes_requested))
         if args.json:
             print(json.dumps({"file": report.file, "verdict": report.verdict,
                               "deck": report.deck_result, "notes": report.notes_result},

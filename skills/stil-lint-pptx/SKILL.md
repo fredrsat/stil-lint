@@ -9,6 +9,13 @@ stil-lint flags AI-sounding style in Norwegian text: generic bullets, buzzwords,
 forced triads, Title Case in Norwegian titles, chatbot leftovers in notes.
 Every .pptx you produce must pass it before you hand it over.
 
+## Speaker notes: only when asked
+
+Do not write speaker notes unless the user asked for them. The notes field is
+not a place for everything that did not fit on the slide. If you think the
+deck needs notes, ask first. When you check the deck, tell stil-lint whether
+notes were requested (`notes_requested`); unrequested notes are flagged (F07).
+
 ## Which tool to call
 
 - The stil-lint server runs on the user's machine. **If the .pptx was made in a
@@ -32,9 +39,10 @@ Every .pptx you produce must pass it before you hand it over.
    Hidden slides (incl. AGENT-META) are included with `hidden: true`; the
    server skips them. Text inside tables and grouped shapes is included.
 
-2. Call the `check_slides` tool with that list as `slides` and `mode: "fast"`
-   (use `"full"` if the server has a Jev key configured). Pass the list as
-   JSON, not as a string.
+2. Call the `check_slides` tool with that list as `slides`, `mode: "fast"`
+   (use `"full"` if the server has a Jev key configured) and
+   `notes_requested: true/false` depending on whether the user asked for
+   speaker notes. Pass the list as JSON, not as a string.
 
 3. Read the verdict:
    - `pass`: done.
@@ -55,3 +63,5 @@ Every .pptx you produce must pass it before you hand it over.
 - Title Case in Norwegian (B07): only the first word and proper nouns capitalised.
 - Generic bullet (D01): add the number, name, place or date that makes it specific.
 - Chatbot leftovers in notes (A04): remove "Håper dette hjelper", "Gi beskjed hvis...".
+- Unrequested notes (F07): delete the notes. Long notes (F08, advisory): cut to
+  what will actually be said, or delete if they were never asked for.

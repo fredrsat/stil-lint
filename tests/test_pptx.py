@@ -185,3 +185,51 @@ def test_skill_script_matches_server_extraction(tmp_path):
     assert [(e["number"], e["title"], e["body"], e["notes"]) for e in ext] == \
            [(s.number, s.title, s.body, s.notes) for s in srv]
     assert ext[2]["hidden"] is False and ext[2]["title"] == "AGENT-META"
+
+
+def _notes_deck(tmp_path, long_notes: bool):
+    from pptx import Presentation
+
+    prs = Presentation()
+    s = prs.slides.add_slide(prs.slide_layouts[1])
+    s.shapes.title.text = "Salget økte 12 % i tredje kvartal"
+    s.placeholders[1].text = "4,2 mill. kr omsetning\nTre nye kunder i Bergen"
+    note = ("Si at veksten kom fra avtalen med Vestkraft i august. " * (12 if long_notes else 1)).strip()
+    s.notes_slide.notes_text_frame.text = note
+    path = tmp_path / "notes.pptx"
+    prs.save(str(path))
+    return path
+
+
+def test_unrequested_notes_flagged(tmp_path):
+    deck = _notes_deck(tmp_path, long_notes=False)
+    engine = Engine(bank_path=tmp_path / "b.db")
+
+    r = asyncio.run(check_deck(deck, mode="fast", engine=engine, notes_requested=False))
+    f = next(f for f in r.notes_result["findings"] if f["rule"] == "F07_ubestilte_notater")
+    assert "slide 1" in f["evidence"] and not f.get("advisory")
+    assert r.verdict != "pass"
+
+    r = asyncio.run(check_deck(deck, mode="fast", engine=engine, notes_requested=True))
+    assert not any(f["rule"].startswith("F07") or f["rule"].startswith("F08")
+                   for f in r.notes_result["findings"])
+
+    r = asyncio.run(check_deck(deck, mode="fast", engine=engine))  # ukjent: korte notater, ingen F07
+    assert not any(f["rule"].startswith("F0") for f in r.notes_result["findings"])
+
+
+def test_long_notes_advisory(tmp_path):
+    deck = _notes_deck(tmp_path, long_notes=True)
+    r = asyncio.run(check_deck(deck, mode="fast", engine=Engine(bank_path=tmp_path / "b.db")))
+    f = next(f for f in r.notes_result["findings"] if f["rule"] == "F08_lange_notater")
+    assert f["advisory"] and f["slide"] == 1 and "ord i notatet" in f["evidence"]
+    assert r.verdict in ("pass", "pass_with_notes")  # råd stopper ikke dekket
+
+
+def test_mcp_check_slides_notes_requested(tmp_path):
+    from stillint import server
+
+    out = asyncio.run(server.check_slides(
+        [{"number": 1, "title": "Salget økte 12 %", "body": "Tre nye kunder i Bergen",
+          "notes": "Nevn Vestkraft-avtalen."}], notes_requested=False))
+    assert any(f["rule"] == "F07_ubestilte_notater" for f in out["notes"]["findings"])

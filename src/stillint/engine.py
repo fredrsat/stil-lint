@@ -34,7 +34,10 @@ class Engine:
         agent_id: str | None = None,
         round_num: int = 1,
         max_rounds: int = 2,
+        extra_findings: list[Finding] | None = None,
     ) -> dict:
+        """extra_findings: funn fra en kaller som vet noe teksten ikke viser
+        (f.eks. pptx_check om notater), lagt gjennom samme gate som resten."""
         t0 = time.monotonic()
         profile = load_profile(genre)
         pre = preprocess(text, lang=lang)
@@ -43,6 +46,8 @@ class Engine:
         findings: list[Finding] = []
         findings += run_lex(pre, rules, channel)
         findings += run_stat(pre, rules, channel)
+        if extra_findings:
+            findings += extra_findings
 
         # Lag 3: frasebank (bare når agent_id er oppgitt)
         if agent_id:
